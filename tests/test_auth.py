@@ -114,3 +114,41 @@ def test_logout_get_not_allowed(client, portal_user):
 
     assert response.status_code == 405
     assert "_auth_user_id" in client.session
+
+
+@pytest.mark.django_db
+def test_anonymous_admin_login_accessible(client):
+    response = client.get("/admin/login/")
+
+    assert response.status_code == 200
+
+
+@pytest.mark.django_db
+def test_login_redirect_preserves_next(client):
+    response = client.get("/contacts/")
+
+    assert response.status_code == 302
+    assert response.url == "/accounts/login/?next=/contacts/"
+
+
+@pytest.mark.django_db
+def test_login_returns_to_requested_page(client, portal_user):
+    response = client.post(
+        reverse("login") + "?next=/contacts/",
+        {
+            "username": "testemployee",
+            "password": "TestPassword123!",
+            "next": "/contacts/",
+        },
+    )
+
+    assert response.status_code == 302
+    assert response.url == "/contacts/"
+
+
+@pytest.mark.django_db
+def test_unknown_page_requires_login(client):
+    response = client.get("/unknown-private-section/")
+
+    assert response.status_code == 302
+    assert reverse("login") in response.url

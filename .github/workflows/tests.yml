@@ -1,0 +1,76 @@
+name: Django Tests
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+
+  pull_request:
+    branches:
+      - develop
+      - main
+
+jobs:
+  tests:
+    name: Run Django Tests
+
+    runs-on: ubuntu-24.04
+
+    services:
+      postgres:
+        image: postgres:18
+
+        env:
+          POSTGRES_DB: leovit_portal
+          POSTGRES_USER: leovit_portal_user
+          POSTGRES_PASSWORD: test_password
+
+        ports:
+          - 5432:5432
+
+        options: >-
+          --health-cmd "pg_isready -U leovit_portal_user -d leovit_portal"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings.testing
+
+      DJANGO_SECRET_KEY: github-actions-test-only-secret-key
+
+      DEBUG: "False"
+
+      ALLOWED_HOSTS: localhost,127.0.0.1,testserver
+
+      DATABASE_URL: postgresql://leovit_portal_user:test_password@127.0.0.1:5432/leovit_portal
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements/development.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements/development.txt
+          python -m pip check
+
+      - name: Check Django configuration
+        run: |
+          python manage.py check --settings=config.settings.testing
+
+      - name: Check migrations
+        run: |
+          python manage.py makemigrations --check --dry-run --settings=config.settings.testing
+
+      - name: Run tests
+        run: |
+          python -m pytest -v

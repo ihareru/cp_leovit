@@ -1,0 +1,43 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1">
+
+    <title>
+        {% block title %}
+        Корпоративный портал Leovit
+        {% endblock %}
+    </title>
+</head>
+<body>
+
+<header>
+    <h2>ЛЕОВИТ — Корпоративный портал</h2>
+
+    <nav>
+        <a href="{% url 'home' %}">Главная</a> |
+        <a href="{% url 'tickets:list' %}">Заявки</a> |
+        <a href="{% url 'forms' %}">Формы</a> |
+        <a href="{% url 'contacts' %}">Контакты</a> |
+        <a href="{% url 'access' %}">Доступ</a>
+    </nav>
+</header>
+
+<hr>
+
+<main>
+    {% block content %}
+    {% endblock %}
+</main>
+
+<hr>
+
+<footer>
+    Корпоративный портал Leovit
+</footer>
+
+</body>
+</html>

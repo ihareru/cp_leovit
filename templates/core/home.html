@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}
+Главная — Leovit
+{% endblock %}
+
+{% block content %}
+
+<h1>Корпоративный портал Leovit</h1>
+
+<h2>Еженедельный дайджест</h2>
+
+<p>
+    Здесь будут публиковаться новости
+    и события компании.
+</p>
+
+<h2>Корпоративные сервисы</h2>
+
+<ul>
+    <li>
+        <a href="{% url 'tickets:list' %}">
+            Сервис заявок
+        </a>
+    </li>
+    <li>
+        <a href="{% url 'forms' %}">
+            Формы
+        </a>
+    </li>
+    <li>
+        <a href="{% url 'contacts' %}">
+            Контакты
+        </a>
+    </li>
+    <li>
+        <a href="{% url 'access' %}">
+            Доступ
+        </a>
+    </li>
+</ul>
+
+{% endblock %}

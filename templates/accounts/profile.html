@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Личный кабинет — Leovit{% endblock %}
+
+{% block content %}
+
+<h1 class="portal-section-title">
+    Личный кабинет
+</h1>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+
+        <div class="portal-card">
+
+            <h3 class="mb-4">
+                Информация о сотруднике
+            </h3>
+
+            <dl class="row">
+
+                <dt class="col-sm-4">Логин</dt>
+                <dd class="col-sm-8">
+                    {{ user.username }}
+                </dd>
+
+                <dt class="col-sm-4">Фамилия</dt>
+                <dd class="col-sm-8">
+                    {{ user.last_name|default:"—" }}
+                </dd>
+
+                <dt class="col-sm-4">Имя</dt>
+                <dd class="col-sm-8">
+                    {{ user.first_name|default:"—" }}
+                </dd>
+
+                <dt class="col-sm-4">Отчество</dt>
+                <dd class="col-sm-8">
+                    {{ user.middle_name|default:"—" }}
+                </dd>
+
+                <dt class="col-sm-4">Должность</dt>
+                <dd class="col-sm-8">
+                    {{ user.position|default:"—" }}
+                </dd>
+
+                <dt class="col-sm-4">Телефон</dt>
+                <dd class="col-sm-8">
+                    {{ user.phone|default:"—" }}
+                </dd>
+
+                <dt class="col-sm-4">Email</dt>
+                <dd class="col-sm-8">
+                    {{ user.email|default:"—" }}
+                </dd>
+
+            </dl>
+
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+
+        <div class="portal-card">
+            <h3>Мои сервисы</h3>
+
+            <p>
+                Быстрый переход к корпоративным разделам.
+            </p>
+
+            <a href="{% url 'tickets:list' %}">
+                Мои заявки
+            </a>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

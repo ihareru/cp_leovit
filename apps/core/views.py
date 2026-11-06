@@ -1,3 +1,4 @@
+from django.http import Http404
 from django.shortcuts import render
 
 
@@ -9,13 +10,12 @@ def section_placeholder(request, section_name):
     sections = {
         "forms": "Формы",
         "contacts": "Контакты",
-        "access": "Доступ",
+        "access": "Корпоративные ресурсы",
     }
 
     title = sections.get(section_name)
 
     if title is None:
-        from django.http import Http404
         raise Http404
 
     return render(

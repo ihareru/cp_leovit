@@ -1,43 +1,120 @@
 {% extends "base.html" %}
 
-{% block title %}
-Главная — Leovit
-{% endblock %}
+{% block title %}Главная — Leovit{% endblock %}
 
 {% block content %}
 
-<h1>Корпоративный портал Leovit</h1>
+<section class="portal-hero">
 
-<h2>Еженедельный дайджест</h2>
+    {% if user.is_authenticated %}
+        <h1>
+            Добро пожаловать,
+            {{ user.first_name|default:user.username }}!
+        </h1>
+    {% else %}
+        <h1>Добро пожаловать в Leovit!</h1>
+    {% endif %}
 
-<p>
-    Здесь будут публиковаться новости
-    и события компании.
-</p>
+    <p>
+        Корпоративные новости, сервисы и полезная
+        информация в одном месте.
+    </p>
 
-<h2>Корпоративные сервисы</h2>
+</section>
 
-<ul>
-    <li>
-        <a href="{% url 'tickets:list' %}">
-            Сервис заявок
-        </a>
-    </li>
-    <li>
-        <a href="{% url 'forms' %}">
-            Формы
-        </a>
-    </li>
-    <li>
-        <a href="{% url 'contacts' %}">
-            Контакты
-        </a>
-    </li>
-    <li>
-        <a href="{% url 'access' %}">
-            Доступ
-        </a>
-    </li>
-</ul>
+<section class="mb-5">
+
+    <h2 class="portal-section-title">
+        Еженедельный дайджест
+    </h2>
+
+    <div class="portal-card">
+
+        <h3>Новости компании</h3>
+
+        <p class="mb-0">
+            Здесь будут публиковаться еженедельные
+            дайджесты, объявления и важные события.
+        </p>
+
+    </div>
+
+</section>
+
+<section>
+
+    <h2 class="portal-section-title">
+        Корпоративные сервисы
+    </h2>
+
+    <div class="row g-4">
+
+        <div class="col-md-6 col-xl-3">
+            <div class="portal-card">
+
+                <h3>Заявки</h3>
+
+                <p>
+                    Обращения в ИТ, 1С и эксплуатацию.
+                </p>
+
+                <a href="{% url 'tickets:list' %}">
+                    Перейти к заявкам
+                </a>
+
+            </div>
+        </div>
+
+        <div class="col-md-6 col-xl-3">
+            <div class="portal-card">
+
+                <h3>Формы</h3>
+
+                <p>
+                    Корпоративные формы и опросы.
+                </p>
+
+                <a href="{% url 'forms' %}">
+                    Открыть формы
+                </a>
+
+            </div>
+        </div>
+
+        <div class="col-md-6 col-xl-3">
+            <div class="portal-card">
+
+                <h3>Контакты</h3>
+
+                <p>
+                    Телефонный справочник сотрудников.
+                </p>
+
+                <a href="{% url 'contacts' %}">
+                    Открыть справочник
+                </a>
+
+            </div>
+        </div>
+
+        <div class="col-md-6 col-xl-3">
+            <div class="portal-card">
+
+                <h3>Ресурсы</h3>
+
+                <p>
+                    Ссылки на корпоративные системы.
+                </p>
+
+                <a href="{% url 'access' %}">
+                    Открыть ресурсы
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+
+</section>
 
 {% endblock %}

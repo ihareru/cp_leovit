@@ -1,5 +1,5 @@
 from django.db.models import Q
-
+from django.shortcuts import get_object_or_404
 from apps.organization.models import DepartmentMembership
 from .models import Ticket
 
@@ -47,3 +47,18 @@ def get_visible_tickets(user):
         Q(author=user)
         | Q(department_id__in=department_ids)
     ).distinct()
+
+
+def get_visible_ticket_or_404(user, number):
+    """
+    Возвращает заявку по номеру,
+    если пользователь имеет право её просматривать.
+
+    Если заявка отсутствует или недоступна,
+    возвращает HTTP 404.
+    """
+
+    return get_object_or_404(
+        get_visible_tickets(user),
+        number=number,
+    )

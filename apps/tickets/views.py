@@ -5,7 +5,7 @@ from django.shortcuts import render, redirect
 
 from .forms import TicketCreateForm
 from .models import Ticket
-from .selectors import get_visible_tickets
+from .selectors import get_visible_tickets, get_visible_ticket_or_404
 
 
 @login_required
@@ -58,4 +58,30 @@ def ticket_create(request):
         request,
         "tickets/ticket_create.html",
         {"form": form},
+    )
+
+@login_required
+def ticket_detail(request, number):
+    """
+    Просмотр карточки заявки.
+    """
+
+    ticket = get_visible_ticket_or_404(
+        request.user,
+        number,
+    )
+
+    due_date_history = (
+        ticket.due_date_history
+        .select_related("changed_by")
+        .order_by("-changed_at")
+    )
+
+    return render(
+        request,
+        "tickets/ticket_detail.html",
+        {
+            "ticket": ticket,
+            "due_date_history": due_date_history,
+        },
     )

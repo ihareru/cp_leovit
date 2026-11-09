@@ -45,11 +45,21 @@
                         {% for ticket in tickets %}
                             <tr>
                                 <td class="fw-semibold">
-                                    {{ ticket.number }}
+                                    <a
+                                        href="{% url 'tickets:detail' ticket.number %}"
+                                        class="text-decoration-none"
+                                    >
+                                        №{{ ticket.number }}
+                                    </a>
                                 </td>
 
                                 <td>
-                                    {{ ticket.title }}
+                                    <a
+                                        href="{% url 'tickets:detail' ticket.number %}"
+                                        class="text-decoration-none text-body"
+                                    >
+                                        {{ ticket.title }}
+                                    </a>
                                 </td>
 
                                 <td>

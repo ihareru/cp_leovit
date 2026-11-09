@@ -20,4 +20,14 @@ urlpatterns = [
         views.ticket_detail,
         name="detail",
     ),
+    path(
+        "<int:number>/take/",
+        views.ticket_take,
+        name="take",
+    ),
+    path(
+        "<int:number>/assign/",
+        views.ticket_assign,
+        name="assign",
+    ),
 ]

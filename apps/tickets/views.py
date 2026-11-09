@@ -4,6 +4,17 @@ from django.core.paginator import Paginator
 from django.shortcuts import render, redirect
 from django.http import QueryDict
 
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.http import HttpResponseNotAllowed
+from django.shortcuts import get_object_or_404
+
+from .assignment_forms import TicketAssignForm
+from .permissions import (
+    can_execute_department_tickets,
+    can_manage_department_tickets,
+)
+from .services import take_ticket, assign_ticket
+
 from .forms import TicketCreateForm
 from .models import Ticket
 from .selectors import (
@@ -107,11 +118,121 @@ def ticket_detail(request, number):
         .order_by("-changed_at")
     )
 
+    can_take = (
+        ticket.status == Ticket.Status.CREATED
+        and ticket.assignee_id is None
+        and can_execute_department_tickets(
+            request.user,
+            ticket.department,
+        )
+    )
+
+    can_assign = (
+        ticket.status in (
+            Ticket.Status.CREATED,
+            Ticket.Status.IN_PROGRESS,
+        )
+        and can_manage_department_tickets(
+            request.user,
+            ticket.department,
+        )
+    )
+
+    assignment_form = (
+        TicketAssignForm(department=ticket.department)
+        if can_assign
+        else None
+    )
+
     return render(
         request,
         "tickets/ticket_detail.html",
         {
             "ticket": ticket,
             "due_date_history": due_date_history,
+            "can_take": can_take,
+            "can_assign": can_assign,
+            "assignment_form": assignment_form,
         },
     )
+
+@login_required
+def ticket_take(request, number):
+
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    ticket = get_visible_ticket_or_404(
+        request.user,
+        number,
+    )
+
+    try:
+        take_ticket(
+            ticket_id=ticket.pk,
+            actor=request.user,
+        )
+    except ValidationError as exc:
+        messages.error(request, "; ".join(exc.messages))
+    else:
+        messages.success(
+            request,
+            f"Заявка №{ticket.number} принята в работу.",
+        )
+
+    return redirect(
+        "tickets:detail",
+        number=ticket.number,
+    )
+
+@login_required
+def ticket_assign(request, number):
+
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    ticket = get_visible_ticket_or_404(
+        request.user,
+        number,
+    )
+
+    if not can_manage_department_tickets(
+        request.user,
+        ticket.department,
+    ):
+        raise PermissionDenied
+
+    form = TicketAssignForm(
+        request.POST,
+        department=ticket.department,
+    )
+
+    if not form.is_valid():
+        messages.error(
+            request,
+            "Выберите действующего исполнителя отдела.",
+        )
+        return redirect(
+            "tickets:detail",
+            number=ticket.number,
+        )
+
+    try:
+        assign_ticket(
+            ticket_id=ticket.pk,
+            assignee=form.cleaned_data["assignee"],
+            actor=request.user,
+        )
+    except ValidationError as exc:
+        messages.error(request, "; ".join(exc.messages))
+    else:
+        messages.success(
+            request,
+            f"Исполнитель заявки №{ticket.number} назначен.",
+        )
+
+    return redirect(
+        "tickets:detail",
+        number=ticket.number,
+    )
+

@@ -20,6 +20,77 @@
     </a>
 </div>
 
+{% if filter_form.errors %}
+    <div class="alert alert-warning">
+        Проверьте параметры поиска.
+        {{ filter_form.non_field_errors }}
+    </div>
+{% endif %}
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+
+        <form method="get">
+
+            <div class="row g-3">
+
+                <div class="col-md-12">
+                    <label class="form-label">
+                        {{ filter_form.q.label }}
+                    </label>
+                    {{ filter_form.q }}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">
+                        {{ filter_form.status.label }}
+                    </label>
+                    {{ filter_form.status }}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">
+                        {{ filter_form.department.label }}
+                    </label>
+                    {{ filter_form.department }}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">
+                        {{ filter_form.assignee.label }}
+                    </label>
+                    {{ filter_form.assignee }}
+                </div>
+
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 mt-3">
+
+                <a
+                    href="{% url 'tickets:list' %}"
+                    class="btn btn-outline-secondary"
+                >
+                    Сбросить
+                </a>
+
+                <button
+                    type="submit"
+                    class="btn btn-success"
+                >
+                    Найти
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+</div>
+
+<div class="mb-3 text-muted">
+    Найдено заявок: <strong>{{ total_count }}</strong>
+</div>
+
 <div class="card shadow-sm border-0">
     <div class="card-body">
 
@@ -156,13 +227,53 @@
                 </li>
             {% endfor %}
 
-            {% if page_obj.has_next %}
-                <li class="page-item">
-                    <a class="page-link"
-                       href="?page={{ page_obj.next_page_number }}">
-                        Далее
-                    </a>
-                </li>
+            {% if page_obj.paginator.num_pages > 1 %}
+
+            <nav aria-label="Страницы заявок" class="mt-4">
+
+                <ul class="pagination justify-content-center flex-wrap">
+
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a
+                                class="page-link"
+                                href="?page={{ page_obj.previous_page_number }}{% if query_string %}&amp;{{ query_string }}{% endif %}"
+                            >
+                                Назад
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    {% for page_number in page_obj.paginator.page_range %}
+
+                        <li class="page-item {% if page_number == page_obj.number %}active{% endif %}">
+
+                            <a
+                                class="page-link"
+                                href="?page={{ page_number }}{% if query_string %}&amp;{{ query_string }}{% endif %}"
+                            >
+                                {{ page_number }}
+                            </a>
+
+                        </li>
+
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a
+                                class="page-link"
+                                href="?page={{ page_obj.next_page_number }}{% if query_string %}&amp;{{ query_string }}{% endif %}"
+                            >
+                                Далее
+                            </a>
+                        </li>
+                    {% endif %}
+
+                </ul>
+
+            </nav>
+
             {% endif %}
 
         </ul>

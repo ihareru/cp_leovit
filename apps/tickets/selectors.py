@@ -62,3 +62,39 @@ def get_visible_ticket_or_404(user, number):
         get_visible_tickets(user),
         number=number,
     )
+
+def filter_tickets(queryset, cleaned_data):
+    """
+    Применяет фильтры к уже доступным заявкам.
+
+    Важно:
+    queryset должен быть получен через
+    get_visible_tickets(user).
+    """
+
+    query = cleaned_data.get("q", "").strip()
+
+    if query:
+        search_condition = Q(title__icontains=query)
+
+        if query.isascii() and query.isdecimal():
+            search_condition |= Q(number=int(query))
+
+        queryset = queryset.filter(search_condition)
+
+    status = cleaned_data.get("status")
+
+    if status:
+        queryset = queryset.filter(status=status)
+
+    department = cleaned_data.get("department")
+
+    if department:
+        queryset = queryset.filter(department=department)
+
+    assignee = cleaned_data.get("assignee")
+
+    if assignee:
+        queryset = queryset.filter(assignee=assignee)
+
+    return queryset

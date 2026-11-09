@@ -2,30 +2,60 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.shortcuts import render, redirect
+from django.http import QueryDict
 
 from .forms import TicketCreateForm
 from .models import Ticket
-from .selectors import get_visible_tickets, get_visible_ticket_or_404
+from .selectors import (
+    get_visible_tickets,
+    get_visible_ticket_or_404,
+    filter_tickets)
+from .filter_forms import TicketFilterForm
 
 
 @login_required
 def ticket_list(request):
-    tickets = get_visible_tickets(request.user).order_by(
+
+    visible_tickets = get_visible_tickets(request.user)
+
+    filter_form = TicketFilterForm(
+        request.GET,
+        visible_tickets=visible_tickets,
+    )
+
+    if filter_form.is_valid():
+        tickets = filter_tickets(
+            visible_tickets,
+            filter_form.cleaned_data,
+        )
+    else:
+        tickets = visible_tickets.none()
+
+    tickets = tickets.order_by(
         "-created_at",
         "-number",
     )
 
     paginator = Paginator(tickets, 20)
+
     page_obj = paginator.get_page(
         request.GET.get("page")
     )
+
+    query_params = request.GET.copy()
+    query_params.pop("page", None)
+
+    query_string = query_params.urlencode()
 
     return render(
         request,
         "tickets/ticket_list.html",
         {
+            "filter_form": filter_form,
             "page_obj": page_obj,
             "tickets": page_obj.object_list,
+            "query_string": query_string,
+            "total_count": paginator.count,
         },
     )
 

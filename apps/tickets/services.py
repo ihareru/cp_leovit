@@ -8,7 +8,7 @@ from .permissions import (
     can_manage_department_tickets,
 )
 
-from .models import Ticket, TicketDueDateHistory
+from .models import Ticket, TicketDueDateHistory, TicketActionHistory
 
 
 @transaction.atomic
@@ -102,6 +102,13 @@ def take_ticket(*, ticket_id, actor):
         ]
     )
 
+    TicketActionHistory.objects.create(
+        ticket=ticket,
+        action=TicketActionHistory.Action.TAKEN,
+        actor=actor,
+        new_assignee=actor,
+    )
+
     return ticket
 
 
@@ -146,6 +153,8 @@ def assign_ticket(*, ticket_id, assignee, actor):
     if ticket.assignee_id == assignee.pk:
         return ticket
 
+    previous_assignee = ticket.assignee
+
     ticket.assignee = assignee
     ticket.status = Ticket.Status.IN_PROGRESS
     ticket.assigned_at = timezone.now()
@@ -157,6 +166,122 @@ def assign_ticket(*, ticket_id, assignee, actor):
             "assigned_at",
             "updated_at",
         ]
+    )
+
+    TicketActionHistory.objects.create(
+        ticket=ticket,
+        action=(
+            TicketActionHistory.Action.REASSIGNED
+            if previous_assignee is not None
+            else TicketActionHistory.Action.ASSIGNED
+        ),
+        actor=actor,
+        old_assignee=previous_assignee,
+        new_assignee=assignee,
+    )
+
+    return ticket
+
+
+@transaction.atomic
+def complete_ticket(*, ticket_id, actor, comment=""):
+    ticket = (
+        Ticket.objects
+        .select_for_update()
+        .select_related("department")
+        .get(pk=ticket_id)
+    )
+
+    if not actor.is_authenticated or not actor.is_active:
+        raise PermissionDenied
+
+    can_complete = (
+        ticket.assignee_id == actor.pk
+        and can_execute_department_tickets(
+            actor, ticket.department
+        )
+    ) or can_manage_department_tickets(
+        actor, ticket.department
+    )
+
+    if not can_complete:
+        raise PermissionDenied(
+            "Нет прав на завершение заявки."
+        )
+
+    if ticket.status != Ticket.Status.IN_PROGRESS:
+        raise ValidationError(
+            "Завершить можно только заявку в работе."
+        )
+
+    if ticket.assignee_id is None:
+        raise ValidationError(
+            "У заявки отсутствует исполнитель."
+        )
+
+    ticket.status = Ticket.Status.COMPLETED
+    ticket.completed_at = timezone.now()
+
+    ticket.save(
+        update_fields=[
+            "status",
+            "completed_at",
+            "updated_at",
+        ]
+    )
+
+    TicketActionHistory.objects.create(
+        ticket=ticket,
+        action=TicketActionHistory.Action.COMPLETED,
+        actor=actor,
+        comment=comment.strip(),
+    )
+
+    return ticket
+
+
+@transaction.atomic
+def reject_ticket(*, ticket_id, actor, reason):
+    ticket = (
+        Ticket.objects
+        .select_for_update()
+        .select_related("department")
+        .get(pk=ticket_id)
+    )
+
+    if not can_manage_department_tickets(
+        actor, ticket.department
+    ):
+        raise PermissionDenied(
+            "Нет прав на отклонение заявки."
+        )
+
+    reason = (reason or "").strip()
+
+    if not reason:
+        raise ValidationError(
+            "Укажите причину отклонения."
+        )
+
+    if ticket.status not in (
+        Ticket.Status.CREATED,
+        Ticket.Status.IN_PROGRESS,
+    ):
+        raise ValidationError(
+            "Заявка уже закрыта."
+        )
+
+    ticket.status = Ticket.Status.REJECTED
+
+    ticket.save(
+        update_fields=["status", "updated_at"]
+    )
+
+    TicketActionHistory.objects.create(
+        ticket=ticket,
+        action=TicketActionHistory.Action.REJECTED,
+        actor=actor,
+        comment=reason,
     )
 
     return ticket

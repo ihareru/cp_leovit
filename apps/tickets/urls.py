@@ -30,4 +30,14 @@ urlpatterns = [
         views.ticket_assign,
         name="assign",
     ),
+    path(
+        "<int:number>/complete/",
+        views.ticket_complete,
+        name="complete",
+    ),
+    path(
+        "<int:number>/reject/",
+        views.ticket_reject,
+        name="reject",
+    ),
 ]

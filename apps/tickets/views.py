@@ -13,14 +13,22 @@ from .permissions import (
     can_execute_department_tickets,
     can_manage_department_tickets,
 )
-from .services import take_ticket, assign_ticket
+from .services import (
+    take_ticket,
+    assign_ticket,
+    complete_ticket,
+    reject_ticket
+)
+
+from .status_forms import TicketCompleteForm, TicketRejectForm
 
 from .forms import TicketCreateForm
 from .models import Ticket
 from .selectors import (
     get_visible_tickets,
     get_visible_ticket_or_404,
-    filter_tickets)
+    filter_tickets
+)
 from .filter_forms import TicketFilterForm
 
 
@@ -144,6 +152,41 @@ def ticket_detail(request, number):
         else None
     )
 
+    can_complete = (
+        ticket.status == Ticket.Status.IN_PROGRESS
+        and ticket.assignee_id is not None
+        and (
+            (
+                ticket.assignee_id == request.user.pk
+                and can_execute_department_tickets(
+                    request.user, ticket.department
+                )
+            )
+            or can_manage_department_tickets(
+                request.user, ticket.department
+            )
+        )
+    )
+
+    can_reject = (
+        ticket.status in (
+            Ticket.Status.CREATED,
+            Ticket.Status.IN_PROGRESS,
+        )
+        and can_manage_department_tickets(
+            request.user, ticket.department
+        )
+    )
+
+    action_history = (
+        ticket.action_history
+        .select_related(
+            "actor",
+            "old_assignee",
+            "new_assignee",
+        )
+    )
+
     return render(
         request,
         "tickets/ticket_detail.html",
@@ -153,6 +196,11 @@ def ticket_detail(request, number):
             "can_take": can_take,
             "can_assign": can_assign,
             "assignment_form": assignment_form,
+            "can_complete": can_complete,
+            "can_reject": can_reject,
+            "complete_form": TicketCompleteForm(),
+            "reject_form": TicketRejectForm(),
+            "action_history": action_history,
         },
     )
 
@@ -235,4 +283,77 @@ def ticket_assign(request, number):
         "tickets:detail",
         number=ticket.number,
     )
+
+
+@login_required
+def ticket_complete(request, number):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    ticket = get_visible_ticket_or_404(
+        request.user, number
+    )
+
+    form = TicketCompleteForm(request.POST)
+
+    if not form.is_valid():
+        messages.error(request, "Некорректные данные.")
+    else:
+        try:
+            complete_ticket(
+                ticket_id=ticket.pk,
+                actor=request.user,
+                comment=form.cleaned_data["comment"],
+            )
+        except ValidationError as exc:
+            messages.error(
+                request, "; ".join(exc.messages)
+            )
+        else:
+            messages.success(
+                request, "Заявка исполнена."
+            )
+
+    return redirect("tickets:detail", number=number)
+
+
+@login_required
+def ticket_reject(request, number):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    ticket = get_visible_ticket_or_404(
+        request.user, number
+    )
+
+    if not can_manage_department_tickets(
+        request.user, ticket.department
+    ):
+        raise PermissionDenied
+
+    form = TicketRejectForm(request.POST)
+
+    if not form.is_valid():
+        messages.error(
+            request,
+            "Необходимо указать причину отклонения.",
+        )
+    else:
+        try:
+            reject_ticket(
+                ticket_id=ticket.pk,
+                actor=request.user,
+                reason=form.cleaned_data["reason"],
+            )
+        except ValidationError as exc:
+            messages.error(
+                request, "; ".join(exc.messages)
+            )
+        else:
+            messages.success(
+                request, "Заявка отклонена."
+            )
+
+    return redirect("tickets:detail", number=number)
+
 

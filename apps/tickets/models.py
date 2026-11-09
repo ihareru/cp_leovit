@@ -232,3 +232,69 @@ class TicketDueDateHistory(models.Model):
 
     def __str__(self):
         return f"Заявка №{self.ticket.number}: {self.old_due_date} → {self.new_due_date}"
+
+
+class TicketActionHistory(models.Model):
+
+    class Action(models.TextChoices):
+        TAKEN = "taken", "Взята в работу"
+        ASSIGNED = "assigned", "Назначен исполнитель"
+        REASSIGNED = "reassigned", "Исполнитель изменён"
+        COMPLETED = "completed", "Исполнена"
+        REJECTED = "rejected", "Отклонена"
+
+    ticket = models.ForeignKey(
+        Ticket,
+        on_delete=models.CASCADE,
+        related_name="action_history",
+        verbose_name="Заявка",
+    )
+
+    action = models.CharField(
+        "Действие",
+        max_length=20,
+        choices=Action.choices,
+    )
+
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="ticket_actions",
+        verbose_name="Кто выполнил",
+    )
+
+    old_assignee = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+
+    new_assignee = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+
+    comment = models.TextField(
+        "Комментарий или причина",
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        "Дата действия",
+        default=timezone.now,
+        editable=False,
+    )
+
+    class Meta:
+        verbose_name = "Действие по заявке"
+        verbose_name_plural = "История действий по заявкам"
+        ordering = ["-created_at", "-pk"]
+
+    def __str__(self):
+        return f"№{self.ticket.number}: {self.get_action_display()}"
+

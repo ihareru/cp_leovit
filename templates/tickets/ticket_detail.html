@@ -166,6 +166,46 @@
                 {% endfor %}
 
             </div>
+
+            <div class="card shadow-sm border-0 mt-4">
+                <div class="card-header bg-white">
+                    <h3 class="h6 mb-0">История действий</h3>
+                </div>
+
+                <div class="card-body">
+                    {% for item in action_history %}
+                        <div class="border-bottom pb-3 mb-3">
+                            <div class="fw-semibold">
+                                {{ item.get_action_display }}
+                            </div>
+
+                            <div class="small text-muted">
+                                {{ item.created_at|date:"d.m.Y H:i" }}
+                                —
+                                {{ item.actor.get_full_name|default:item.actor.username }}
+                            </div>
+
+                            {% if item.new_assignee %}
+                                <div class="small mt-1">
+                                    Исполнитель:
+                                    {{ item.new_assignee.get_full_name|default:item.new_assignee.username }}
+                                </div>
+                            {% endif %}
+
+                            {% if item.comment %}
+                                <div class="mt-2">
+                                    {{ item.comment|linebreaksbr }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% empty %}
+                        <p class="text-muted mb-0">
+                            История действий пока отсутствует.
+                        </p>
+                    {% endfor %}
+                </div>
+            </div>
+
         </div>
 
     </div>
@@ -236,6 +276,42 @@
 
                         </form>
 
+                    {% endif %}
+
+                    {% if can_complete %}
+                    <div class="card shadow-sm border-0 mt-4">
+                        <div class="card-body">
+                            <h3 class="h6">Завершение заявки</h3>
+
+                            <form method="post"
+                                  action="{% url 'tickets:complete' ticket.number %}">
+                                {% csrf_token %}
+                                {{ complete_form.as_p }}
+
+                                <button type="submit" class="btn btn-success">
+                                    Исполнить заявку
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if can_reject %}
+                    <div class="card shadow-sm border-0 mt-4">
+                        <div class="card-body">
+                            <h3 class="h6">Отклонение заявки</h3>
+
+                            <form method="post"
+                                  action="{% url 'tickets:reject' ticket.number %}">
+                                {% csrf_token %}
+                                {{ reject_form.as_p }}
+
+                                <button type="submit" class="btn btn-outline-danger">
+                                    Отклонить заявку
+                                </button>
+                            </form>
+                        </div>
+                    </div>
                     {% endif %}
 
                 </div>

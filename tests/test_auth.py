@@ -152,3 +152,42 @@ def test_unknown_page_requires_login(client):
 
     assert response.status_code == 302
     assert reverse("login") in response.url
+
+
+@pytest.mark.django_db
+def test_anonymous_login_has_no_navigation(client):
+    response = client.get(reverse("login"))
+
+    assert response.status_code == 200
+
+    content = response.content.decode("utf-8")
+
+    assert 'id="portalNavbar"' not in content
+    assert "navbar-toggler" not in content
+    assert "portal-footer" not in content
+
+
+@pytest.mark.django_db
+def test_authenticated_navigation_visible(client, portal_user):
+    client.force_login(portal_user)
+
+    response = client.get(reverse("home"))
+
+    assert response.status_code == 200
+
+    content = response.content.decode("utf-8")
+
+    assert 'id="portalNavbar"' in content
+    assert "navbar-toggler" in content
+    assert "portal-footer" in content
+
+
+@pytest.mark.django_db
+def test_anonymous_logo_links_to_login(client):
+    response = client.get(reverse("login"))
+
+    assert response.status_code == 200
+
+    content = response.content.decode("utf-8")
+
+    assert 'href="/accounts/login/"' in content

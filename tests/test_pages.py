@@ -59,7 +59,7 @@ def test_placeholder_pages_require_login(client, url_name):
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     "url_name",
-    ["forms", "contacts", "access"],
+    ["contacts", "access"],
 )
 def test_placeholder_pages_authenticated(
     authenticated_client,

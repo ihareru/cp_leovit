@@ -65,21 +65,23 @@
             </div>
         </div>
 
-        <div class="col-md-6 col-xl-3">
-            <div class="portal-card">
+        {% if can_access_forms %}
+            <div class="col-md-6 col-xl-3">
+                <div class="portal-card">
 
-                <h3>Формы</h3>
+                    <h3>Формы</h3>
 
-                <p>
-                    Корпоративные формы и опросы.
-                </p>
+                    <p>
+                        Корпоративные формы и опросы.
+                    </p>
 
-                <a href="{% url 'forms' %}">
-                    Открыть формы
-                </a>
+                    <a href="{% url 'forms' %}">
+                        Открыть формы
+                    </a>
 
+                </div>
             </div>
-        </div>
+        {% endif %}
 
         <div class="col-md-6 col-xl-3">
             <div class="portal-card">

@@ -67,12 +67,14 @@
                             </a>
                         </li>
 
-                        <li class="nav-item">
-                            <a class="nav-link"
-                               href="{% url 'forms' %}">
-                                Формы
-                            </a>
-                        </li>
+                        {% if can_access_forms %}
+                            <li class="nav-item">
+                                <a class="nav-link"
+                                   href="{% url 'forms' %}">
+                                    Формы
+                                </a>
+                            </li>
+                        {% endif %}
 
                         <li class="nav-item">
                             <a class="nav-link"

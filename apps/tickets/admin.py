@@ -68,10 +68,14 @@ class TicketAdmin(admin.ModelAdmin):
     inlines = [TicketDueDateHistoryInline]
 
     def get_readonly_fields(self, request, obj=None):
-        fields = list(super().get_readonly_fields(request, obj))
+        fields = list(
+            super().get_readonly_fields(request, obj)
+        )
 
         if obj is not None:
             fields.extend([
+                "status",
+                "assignee",
                 "requested_due_date",
                 "due_date",
             ])

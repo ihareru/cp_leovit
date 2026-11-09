@@ -40,4 +40,9 @@ urlpatterns = [
         views.ticket_reject,
         name="reject",
     ),
+    path(
+        "<int:number>/due-date/",
+        views.ticket_change_due_date,
+        name="change_due_date",
+    ),
 ]

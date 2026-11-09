@@ -20,20 +20,62 @@ def change_ticket_due_date(
     reason="",
 ):
     """
-    Изменяет срок заявки и сохраняет историю.
+    Изменение срока выполнения заявки.
+
+    Изменять срок может руководитель отдела
+    или администратор портала.
+
+    Каждое фактическое изменение фиксируется
+    в TicketDueDateHistory.
     """
 
-    locked_ticket = Ticket.objects.select_for_update().get(
-        pk=ticket.pk,
+    locked_ticket = (
+        Ticket.objects
+        .select_for_update()
+        .select_related("department")
+        .get(pk=ticket.pk)
     )
+
+    # Проверка полномочий
+    if not can_manage_department_tickets(
+        changed_by,
+        locked_ticket.department,
+    ):
+        raise PermissionDenied(
+            "Нет прав на изменение срока заявки."
+        )
+
+    # Проверка статуса
+    if locked_ticket.status not in (
+        Ticket.Status.CREATED,
+        Ticket.Status.IN_PROGRESS,
+    ):
+        raise ValidationError(
+            "Нельзя изменить срок закрытой заявки."
+        )
 
     old_due_date = locked_ticket.due_date
 
+    # Если срок не изменился, историю не создаём
     if old_due_date == new_due_date:
         return locked_ticket
 
+    # Причина обязательна
+    reason = (reason or "").strip()
+
+    if not reason:
+        raise ValidationError(
+            "Необходимо указать причину изменения срока."
+        )
+
     locked_ticket.due_date = new_due_date
-    locked_ticket.save(update_fields=["due_date", "updated_at"])
+
+    locked_ticket.save(
+        update_fields=[
+            "due_date",
+            "updated_at",
+        ]
+    )
 
     TicketDueDateHistory.objects.create(
         ticket=locked_ticket,

@@ -4,7 +4,7 @@ import pytest
 
 from django.db import IntegrityError, transaction
 
-from apps.organization.models import Department
+from apps.organization.models import Department, DepartmentMembership
 from apps.tickets.models import Ticket, TicketDueDateHistory
 from apps.tickets.services import change_ticket_due_date
 
@@ -34,6 +34,16 @@ def ticket(employee, department):
         description="Принтер не печатает документы.",
         requested_due_date=date(2026, 11, 20),
     )
+
+
+@pytest.fixture
+def manager(employee, department):
+    DepartmentMembership.objects.create(
+        user=employee,
+        department=department,
+        role=DepartmentMembership.Role.MANAGER,
+    )
+    return employee
 
 
 @pytest.mark.django_db
@@ -73,11 +83,11 @@ def test_ticket_default_status(ticket):
 
 
 @pytest.mark.django_db
-def test_change_due_date_creates_history(ticket, employee):
+def test_change_due_date_creates_history(ticket, manager):
     updated = change_ticket_due_date(
         ticket=ticket,
         new_due_date=date(2026, 11, 25),
-        changed_by=employee,
+        changed_by=manager,
         reason="Требуется дополнительное оборудование",
     )
 
@@ -87,19 +97,32 @@ def test_change_due_date_creates_history(ticket, employee):
 
     assert history.old_due_date == date(2026, 11, 20)
     assert history.new_due_date == date(2026, 11, 25)
-    assert history.changed_by == employee
+    assert history.changed_by == manager
 
 
 @pytest.mark.django_db
-def test_same_due_date_does_not_create_history(ticket, employee):
-    change_ticket_due_date(
+def test_same_due_date_does_not_create_history(
+    ticket, employee
+):
+    # Назначаем сотруднику роль руководителя отдела
+    DepartmentMembership.objects.create(
+        user=employee,
+        department=ticket.department,
+        role=DepartmentMembership.Role.MANAGER,
+    )
+
+    # Срок не изменяется
+    updated = change_ticket_due_date(
         ticket=ticket,
         new_due_date=ticket.due_date,
         changed_by=employee,
     )
 
+    assert updated.due_date == ticket.due_date
+
+    # Новых записей истории быть не должно
     assert TicketDueDateHistory.objects.filter(
-        ticket=ticket,
+        ticket=ticket
     ).count() == 0
 
 

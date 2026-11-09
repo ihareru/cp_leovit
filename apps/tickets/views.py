@@ -17,11 +17,12 @@ from .services import (
     take_ticket,
     assign_ticket,
     complete_ticket,
-    reject_ticket
+    reject_ticket,
+    change_ticket_due_date
 )
 
 from .status_forms import TicketCompleteForm, TicketRejectForm
-
+from .due_date_forms import TicketDueDateForm
 from .forms import TicketCreateForm
 from .models import Ticket
 from .selectors import (
@@ -187,6 +188,27 @@ def ticket_detail(request, number):
         )
     )
 
+    can_change_due_date = (
+        ticket.status in (
+            Ticket.Status.CREATED,
+            Ticket.Status.IN_PROGRESS,
+        )
+        and can_manage_department_tickets(
+            request.user,
+            ticket.department,
+        )
+    )
+
+    due_date_form = (
+        TicketDueDateForm(
+            initial={
+                "new_due_date": ticket.due_date,
+            }
+        )
+        if can_change_due_date
+        else None
+    )
+
     return render(
         request,
         "tickets/ticket_detail.html",
@@ -201,6 +223,8 @@ def ticket_detail(request, number):
             "complete_form": TicketCompleteForm(),
             "reject_form": TicketRejectForm(),
             "action_history": action_history,
+            "can_change_due_date": can_change_due_date,
+            "due_date_form": due_date_form,
         },
     )
 
@@ -357,3 +381,62 @@ def ticket_reject(request, number):
     return redirect("tickets:detail", number=number)
 
 
+@login_required
+def ticket_change_due_date(request, number):
+    """
+    Изменение срока выполнения заявки.
+    """
+
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    ticket = get_visible_ticket_or_404(
+        request.user,
+        number,
+    )
+
+    if not can_manage_department_tickets(
+        request.user,
+        ticket.department,
+    ):
+        raise PermissionDenied(
+            "Нет прав на изменение срока заявки."
+        )
+
+    form = TicketDueDateForm(request.POST)
+
+    if not form.is_valid():
+        messages.error(
+            request,
+            "Проверьте новый срок и укажите причину изменения.",
+        )
+
+        return redirect(
+            "tickets:detail",
+            number=number,
+        )
+
+    try:
+        change_ticket_due_date(
+            ticket=ticket,
+            new_due_date=form.cleaned_data["new_due_date"],
+            changed_by=request.user,
+            reason=form.cleaned_data["reason"],
+        )
+
+    except ValidationError as exc:
+        messages.error(
+            request,
+            "; ".join(exc.messages),
+        )
+
+    else:
+        messages.success(
+            request,
+            "Срок выполнения заявки обновлён.",
+        )
+
+    return redirect(
+        "tickets:detail",
+        number=number,
+    )

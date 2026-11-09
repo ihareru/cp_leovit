@@ -205,10 +205,21 @@ def test_ticket_detail_displays_due_date_history(
     author, _, _ = users
     ticket = tickets[0]
 
+    manager = type(author).objects.create_user(
+        username="detail_history_manager",
+        password="TestPassword123!",
+    )
+
+    DepartmentMembership.objects.create(
+        user=manager,
+        department=ticket.department,
+        role=DepartmentMembership.Role.MANAGER,
+    )
+
     change_ticket_due_date(
         ticket=ticket,
         new_due_date=date(2026, 11, 25),
-        changed_by=author,
+        changed_by=manager,
         reason="Ожидание запасной части",
     )
 

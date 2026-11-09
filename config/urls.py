@@ -41,3 +41,6 @@ urlpatterns = [
         include("apps.accounts.urls"),
     ),
 ]
+
+handler404 = "apps.core.error_views.page_not_found"
+handler403 = "apps.core.error_views.permission_denied"

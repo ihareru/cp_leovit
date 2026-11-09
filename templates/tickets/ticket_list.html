@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Заявки | Leovit{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Заявки</h1>
+        <p class="text-muted mb-0">
+            Список доступных вам заявок
+        </p>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+
+        {% if tickets %}
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+
+                    <thead>
+                        <tr>
+                            <th>№</th>
+                            <th>Заявка</th>
+                            <th>Отдел</th>
+                            <th>Автор</th>
+                            <th>Исполнитель</th>
+                            <th>Статус</th>
+                            <th>Срок</th>
+                            <th>Создана</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for ticket in tickets %}
+                            <tr>
+                                <td class="fw-semibold">
+                                    {{ ticket.number }}
+                                </td>
+
+                                <td>
+                                    {{ ticket.title }}
+                                </td>
+
+                                <td>
+                                    {{ ticket.department.name }}
+                                </td>
+
+                                <td>
+                                    {{ ticket.author.get_full_name|default:ticket.author.username }}
+                                </td>
+
+                                <td>
+                                    {% if ticket.assignee %}
+                                        {{ ticket.assignee.get_full_name|default:ticket.assignee.username }}
+                                    {% else %}
+                                        <span class="text-muted">
+                                            Не назначен
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if ticket.status == "created" %}
+                                        <span class="badge bg-secondary">
+                                            Создана
+                                        </span>
+                                    {% elif ticket.status == "in_progress" %}
+                                        <span class="badge bg-primary">
+                                            В работе
+                                        </span>
+                                    {% elif ticket.status == "completed" %}
+                                        <span class="badge bg-success">
+                                            Исполнена
+                                        </span>
+                                    {% elif ticket.status == "rejected" %}
+                                        <span class="badge bg-danger">
+                                            Отклонена
+                                        </span>
+                                    {% else %}
+                                        {{ ticket.get_status_display }}
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if ticket.due_date %}
+                                        {{ ticket.due_date|date:"d.m.Y" }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {{ ticket.created_at|date:"d.m.Y H:i" }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+
+                </table>
+            </div>
+
+        {% else %}
+
+            <div class="text-center py-5">
+                <h2 class="h5">Заявок пока нет</h2>
+                <p class="text-muted mb-0">
+                    Здесь будут отображаться доступные вам заявки.
+                </p>
+            </div>
+
+        {% endif %}
+
+    </div>
+</div>
+
+{% if page_obj.paginator.num_pages > 1 %}
+    <nav aria-label="Страницы заявок" class="mt-4">
+        <ul class="pagination justify-content-center">
+
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link"
+                       href="?page={{ page_obj.previous_page_number }}">
+                        Назад
+                    </a>
+                </li>
+            {% endif %}
+
+            {% for page_number in page_obj.paginator.page_range %}
+                <li class="page-item {% if page_number == page_obj.number %}active{% endif %}">
+                    <a class="page-link"
+                       href="?page={{ page_number }}">
+                        {{ page_number }}
+                    </a>
+                </li>
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link"
+                       href="?page={{ page_obj.next_page_number }}">
+                        Далее
+                    </a>
+                </li>
+            {% endif %}
+
+        </ul>
+    </nav>
+{% endif %}
+
+{% endblock %}

@@ -49,6 +49,7 @@ class Department(models.Model):
 class DepartmentMembership(models.Model):
     class Role(models.TextChoices):
         MEMBER = "member", "Сотрудник"
+        EXECUTOR = "executor", "Исполнитель"
         MANAGER = "manager", "Руководитель"
 
     user = models.ForeignKey(

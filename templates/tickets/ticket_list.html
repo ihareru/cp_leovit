@@ -9,8 +9,15 @@
         <h1 class="h3 mb-1">Заявки</h1>
         <p class="text-muted mb-0">
             Список доступных вам заявок
+
         </p>
     </div>
+    <a
+        href="{% url 'tickets:create' %}"
+        class="btn btn-success"
+    >
+        + Новая заявка
+    </a>
 </div>
 
 <div class="card shadow-sm border-0">

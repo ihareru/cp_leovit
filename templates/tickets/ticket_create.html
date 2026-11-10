@@ -85,4 +85,30 @@
     </div>
 </div>
 
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const dateInput = document.querySelector(
+        ".ticket-date-picker"
+    );
+
+    if (!dateInput) {
+        return;
+    }
+
+    dateInput.addEventListener("click", function () {
+        if (typeof dateInput.showPicker === "function") {
+            try {
+                dateInput.showPicker();
+            } catch (error) {
+                // Если браузер не разрешает программное
+                // открытие календаря, остаётся стандартный ввод.
+                dateInput.focus();
+            }
+        } else {
+            dateInput.focus();
+        }
+    });
+});
+</script>
+
 {% endblock %}

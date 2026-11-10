@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from apps.organization.models import Department, DepartmentMembership
 from apps.tickets.models import Ticket, TicketDueDateHistory
-from apps.tickets.services import change_ticket_due_date
+from apps.tickets.services import change_ticket_due_date, take_ticket
 
 
 @pytest.fixture
@@ -300,3 +300,86 @@ def test_due_date_history_visible_in_detail(client, data):
     assert "Ожидание оборудования" in (
         response.content.decode("utf-8")
     )
+
+
+@pytest.mark.django_db
+def test_assigned_executor_can_change_due_date(data):
+    ticket = data["ticket"]
+
+    take_ticket(
+        ticket_id=ticket.pk,
+        actor=data["executor"],
+    )
+
+    updated = change_ticket_due_date(
+        ticket=ticket,
+        new_due_date=date(2026, 11, 28),
+        changed_by=data["executor"],
+        reason="Необходимо дополнительное время",
+    )
+
+    assert updated.due_date == date(2026, 11, 28)
+
+    assert TicketDueDateHistory.objects.filter(
+        ticket=ticket,
+        changed_by=data["executor"],
+    ).count() == 1
+
+
+@pytest.mark.django_db
+def test_unassigned_executor_cannot_change_due_date(data):
+    with pytest.raises(PermissionDenied):
+        change_ticket_due_date(
+            ticket=data["ticket"],
+            new_due_date=date(2026, 11, 28),
+            changed_by=data["executor"],
+            reason="Попытка изменения",
+        )
+
+
+@pytest.mark.django_db
+def test_assigned_executor_sees_due_date_form(client, data):
+    ticket = data["ticket"]
+
+    take_ticket(
+        ticket_id=ticket.pk,
+        actor=data["executor"],
+    )
+
+    client.force_login(data["executor"])
+
+    response = client.get(
+        reverse("tickets:detail", args=[ticket.number])
+    )
+
+    assert response.status_code == 200
+    assert response.context["can_change_due_date"] is True
+
+
+@pytest.mark.django_db
+def test_assigned_executor_can_change_due_date_via_post(client, data):
+    ticket = data["ticket"]
+
+    take_ticket(
+        ticket_id=ticket.pk,
+        actor=data["executor"],
+    )
+
+    client.force_login(data["executor"])
+
+    response = client.post(
+        reverse(
+            "tickets:change_due_date",
+            args=[ticket.number],
+        ),
+        {
+            "new_due_date": "2026-11-28",
+            "reason": "Дополнительные работы",
+        },
+    )
+
+    assert response.status_code == 302
+
+    ticket.refresh_from_db()
+
+    assert ticket.due_date == date(2026, 11, 28)

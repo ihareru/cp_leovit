@@ -105,3 +105,36 @@ def can_view_department_tickets(user, department):
             DepartmentMembership.Role.MANAGER,
         ],
     )
+
+def can_change_ticket_due_date(user, ticket):
+    """
+    Изменять срок могут:
+    - администратор портала;
+    - руководитель отдела;
+    - назначенный исполнитель заявки.
+
+    Только для незакрытых заявок.
+    """
+
+    if not is_active_user(user):
+        return False
+
+    if ticket.status not in (
+        "created",
+        "in_progress",
+    ):
+        return False
+
+    if can_manage_department_tickets(
+        user,
+        ticket.department,
+    ):
+        return True
+
+    return (
+        ticket.assignee_id == user.pk
+        and can_execute_department_tickets(
+            user,
+            ticket.department,
+        )
+    )

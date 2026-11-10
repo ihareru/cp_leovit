@@ -218,3 +218,28 @@ def test_reject_view_success(client, data):
     assert response.status_code == 302
     data["ticket"].refresh_from_db()
     assert data["ticket"].status == Ticket.Status.REJECTED
+
+
+@pytest.mark.django_db
+def test_executor_sees_complete_button(client, data):
+    take_ticket(
+        ticket_id=data["ticket"].pk,
+        actor=data["executor"],
+    )
+
+    client.force_login(data["executor"])
+
+    response = client.get(
+        reverse(
+            "tickets:detail",
+            args=[data["ticket"].number],
+        )
+    )
+
+    assert response.status_code == 200
+    assert response.context["can_complete"] is True
+
+    assert reverse(
+        "tickets:complete",
+        args=[data["ticket"].number],
+    ) in response.content.decode("utf-8")

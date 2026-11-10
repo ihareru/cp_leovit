@@ -20,7 +20,7 @@ from .services import (
     reject_ticket,
     change_ticket_due_date
 )
-
+from .permissions import can_change_ticket_due_date
 from .status_forms import TicketCompleteForm, TicketRejectForm
 from .due_date_forms import TicketDueDateForm
 from .forms import TicketCreateForm
@@ -154,19 +154,21 @@ def ticket_detail(request, number):
     )
 
     can_complete = (
-        ticket.status == Ticket.Status.IN_PROGRESS
-        and ticket.assignee_id is not None
-        and (
-            (
-                ticket.assignee_id == request.user.pk
-                and can_execute_department_tickets(
-                    request.user, ticket.department
-                )
+            ticket.status == Ticket.Status.IN_PROGRESS
+            and ticket.assignee_id is not None
+            and (
+                    (
+                            ticket.assignee_id == request.user.pk
+                            and can_execute_department_tickets(
+                        request.user,
+                        ticket.department,
+                    )
+                    )
+                    or can_manage_department_tickets(
+                request.user,
+                ticket.department,
             )
-            or can_manage_department_tickets(
-                request.user, ticket.department
             )
-        )
     )
 
     can_reject = (
@@ -188,15 +190,9 @@ def ticket_detail(request, number):
         )
     )
 
-    can_change_due_date = (
-        ticket.status in (
-            Ticket.Status.CREATED,
-            Ticket.Status.IN_PROGRESS,
-        )
-        and can_manage_department_tickets(
-            request.user,
-            ticket.department,
-        )
+    can_change_due_date = can_change_ticket_due_date(
+        request.user,
+        ticket,
     )
 
     due_date_form = (
@@ -395,9 +391,9 @@ def ticket_change_due_date(request, number):
         number,
     )
 
-    if not can_manage_department_tickets(
-        request.user,
-        ticket.department,
+    if not can_change_ticket_due_date(
+            request.user,
+            ticket,
     ):
         raise PermissionDenied(
             "Нет прав на изменение срока заявки."

@@ -35,8 +35,9 @@ class TicketCreateForm(forms.ModelForm):
             ),
             "requested_due_date": forms.DateInput(
                 attrs={
-                    "class": "form-control",
+                    "class": "form-control ticket-date-picker",
                     "type": "date",
+                    "style": "cursor: pointer;",
                 },
                 format="%Y-%m-%d",
             ),

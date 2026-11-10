@@ -9,6 +9,7 @@ from .permissions import (
 )
 
 from .models import Ticket, TicketDueDateHistory, TicketActionHistory
+from .permissions import can_change_ticket_due_date
 
 
 @transaction.atomic
@@ -36,11 +37,23 @@ def change_ticket_due_date(
         .get(pk=ticket.pk)
     )
 
-    # Проверка полномочий
-    if not can_manage_department_tickets(
+    # Проверка прав отдельно от статуса: закрытая заявка для
+    # уполномоченного пользователя должна давать ValidationError.
+    is_manager = can_manage_department_tickets(
         changed_by,
         locked_ticket.department,
-    ):
+    )
+    is_assigned_executor = (
+        changed_by is not None
+        and getattr(changed_by, "is_authenticated", False)
+        and locked_ticket.assignee_id == changed_by.pk
+        and can_execute_department_tickets(
+            changed_by,
+            locked_ticket.department,
+        )
+    )
+
+    if not (is_manager or is_assigned_executor):
         raise PermissionDenied(
             "Нет прав на изменение срока заявки."
         )

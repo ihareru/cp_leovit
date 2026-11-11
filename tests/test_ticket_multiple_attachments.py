@@ -34,6 +34,7 @@ def test_create_ticket_with_multiple_files(
             "department": department.pk,
             "title": "Заявка с несколькими файлами",
             "description": "Проверка",
+            "requested_due_date": "2026-11-20",
             "files": [
                 make_file("one.txt"),
                 make_file("two.pdf"),

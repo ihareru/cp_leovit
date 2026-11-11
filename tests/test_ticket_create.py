@@ -99,13 +99,12 @@ def test_create_ticket_without_due_date(
         },
     )
 
-    assert response.status_code == 302
+    assert response.status_code == 200
+    assert "requested_due_date" in response.context["form"].errors
 
-    ticket = Ticket.objects.get(
+    assert not Ticket.objects.filter(
         title="Настройка программы"
-    )
-
-    assert ticket.due_date is None
+    ).exists()
 
 
 @pytest.mark.django_db
@@ -147,6 +146,7 @@ def test_ticket_author_cannot_be_overridden(
             "department": active.pk,
             "title": "Проверка автора",
             "description": "Описание",
+            "requested_due_date": "2026-11-20",
             "author": another_user.pk,
             "status": Ticket.Status.COMPLETED,
         },

@@ -240,6 +240,7 @@ def test_create_ticket_with_attachment(
             "department": department.pk,
             "title": "Заявка с файлом",
             "description": "Проверка загрузки при создании",
+            "requested_due_date": "2026-11-20",
             "file": make_file("document.txt", b"Hello"),
         },
     )
@@ -275,6 +276,7 @@ def test_create_ticket_without_attachment(
             "department": department.pk,
             "title": "Заявка без файла",
             "description": "Обычная заявка",
+            "requested_due_date": "2026-11-20",
         },
     )
 

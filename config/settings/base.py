@@ -141,3 +141,10 @@ CSRF_COOKIE_SAMESITE = "Lax"
 EMAIL_BACKEND = (
     "django.core.mail.backends.console.EmailBackend"
 )
+
+PRIVATE_UPLOAD_ROOT = (
+    BASE_DIR / "private_uploads"
+)
+
+TICKET_ATTACHMENT_MAX_SIZE = 10 * 1024 * 1024
+TICKET_ATTACHMENT_MAX_COUNT = 10

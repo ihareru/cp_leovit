@@ -1,0 +1,121 @@
+<div class="card shadow-sm border-0 mt-4">
+
+    <div class="card-header bg-white">
+        <h3 class="h6 mb-0">
+            История заявки
+        </h3>
+    </div>
+
+    <div class="card-body">
+
+        {% for event in timeline %}
+
+            <div class="d-flex mb-4">
+
+                <div class="me-3">
+
+                    {% if event.kind == "created" %}
+                        <span class="badge bg-secondary">
+                            Создание
+                        </span>
+
+                    {% elif event.kind == "due_date" %}
+                        <span class="badge bg-info text-dark">
+                            Срок
+                        </span>
+
+                    {% else %}
+                        <span class="badge bg-success">
+                            Действие
+                        </span>
+                    {% endif %}
+
+                </div>
+
+                <div class="flex-grow-1">
+
+                    <div class="fw-semibold">
+                        {{ event.title }}
+                    </div>
+
+                    <div class="text-muted small mb-2">
+                        {{ event.occurred_at|date:"d.m.Y H:i" }}
+
+                        {% if event.actor %}
+                            · {{ event.actor.get_full_name|default:event.actor.username }}
+                        {% endif %}
+                    </div>
+
+                    {% if event.kind == "due_date" %}
+
+                        <div class="small mb-2">
+
+                            <span class="text-muted">
+                                Было:
+                            </span>
+
+                            {{ event.old_due_date|date:"d.m.Y"|default:"Не указан" }}
+
+                            <span class="mx-2">→</span>
+
+                            <span class="text-muted">
+                                Стало:
+                            </span>
+
+                            <strong>
+                                {{ event.new_due_date|date:"d.m.Y"|default:"Не указан" }}
+                            </strong>
+
+                        </div>
+
+                    {% endif %}
+
+                    {% if event.old_assignee or event.new_assignee %}
+
+                        <div class="small mb-2">
+
+                            {% if event.old_assignee %}
+                                <div>
+                                    Предыдущий исполнитель:
+                                    {{ event.old_assignee.get_full_name|default:event.old_assignee.username }}
+                                </div>
+                            {% endif %}
+
+                            {% if event.new_assignee %}
+                                <div>
+                                    Новый исполнитель:
+                                    {{ event.new_assignee.get_full_name|default:event.new_assignee.username }}
+                                </div>
+                            {% endif %}
+
+                        </div>
+
+                    {% endif %}
+
+                    {% if event.comment %}
+
+                        <div class="small bg-light rounded p-2">
+                            {{ event.comment|linebreaksbr }}
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+            {% if not forloop.last %}
+                <hr class="my-3">
+            {% endif %}
+
+        {% empty %}
+
+            <div class="text-muted">
+                История заявки пока отсутствует.
+            </div>
+
+        {% endfor %}
+
+    </div>
+
+</div>

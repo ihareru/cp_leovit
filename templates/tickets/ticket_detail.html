@@ -1,3 +1,4 @@
+
 {% extends "base.html" %}
 
 {% block title %}
@@ -7,22 +8,22 @@
 {% block content %}
 
 <div class="mb-4">
-    <a
-        href="{% url 'tickets:list' %}"
-        class="text-decoration-none"
-    >
+    <a href="{% url 'tickets:list' %}"
+       class="text-decoration-none">
         ← К списку заявок
     </a>
 </div>
 
-<div class="d-flex justify-content-between align-items-start mb-4">
+<!-- Заголовок заявки -->
+<div class="d-flex flex-wrap justify-content-between
+            align-items-start gap-3 mb-4">
 
     <div>
         <h1 class="h3 mb-2">
             Заявка №{{ ticket.number }}
         </h1>
 
-        <h2 class="h5 text-muted">
+        <h2 class="h5 text-muted mb-0">
             {{ ticket.title }}
         </h2>
     </div>
@@ -45,7 +46,9 @@
                 Отклонена
             </span>
         {% else %}
-            {{ ticket.get_status_display }}
+            <span class="badge bg-secondary fs-6">
+                {{ ticket.get_status_display }}
+            </span>
         {% endif %}
     </div>
 
@@ -53,8 +56,10 @@
 
 <div class="row g-4">
 
+    <!-- Левая колонка -->
     <div class="col-lg-8">
 
+        <!-- Информация о заявке -->
         <div class="card shadow-sm border-0 mb-4">
 
             <div class="card-header bg-white">
@@ -65,12 +70,13 @@
 
             <div class="card-body">
 
-                <div class="row mb-3">
+                <div class="row g-3 mb-3">
 
                     <div class="col-md-6">
                         <div class="text-muted small">
                             Отдел
                         </div>
+
                         <div class="fw-semibold">
                             {{ ticket.department.name }}
                         </div>
@@ -80,14 +86,11 @@
                         <div class="text-muted small">
                             Автор
                         </div>
+
                         <div class="fw-semibold">
                             {{ ticket.author.get_full_name|default:ticket.author.username }}
                         </div>
                     </div>
-
-                </div>
-
-                <div class="row mb-3">
 
                     <div class="col-md-6">
                         <div class="text-muted small">
@@ -95,7 +98,9 @@
                         </div>
 
                         {% if ticket.assignee %}
-                            {{ ticket.assignee.get_full_name|default:ticket.assignee.username }}
+                            <div class="fw-semibold">
+                                {{ ticket.assignee.get_full_name|default:ticket.assignee.username }}
+                            </div>
                         {% else %}
                             <span class="text-muted">
                                 Не назначен
@@ -107,244 +112,329 @@
                         <div class="text-muted small">
                             Дата создания
                         </div>
-                        {{ ticket.created_at|date:"d.m.Y H:i" }}
+
+                        <div>
+                            {{ ticket.created_at|date:"d.m.Y H:i" }}
+                        </div>
                     </div>
 
                 </div>
 
                 <hr>
 
-                <h3 class="h6">Описание</h3>
+                <h3 class="h6 mb-3">
+                    Описание
+                </h3>
 
-                <div class="mt-3">
+                <div>
                     {{ ticket.description|linebreaks }}
                 </div>
 
             </div>
         </div>
 
-        <div class="card shadow-sm border-0">
+        <!-- Единая история заявки -->
+        {% include "tickets/partials/ticket_timeline.html" %}
+
+        {% include "tickets/partials/ticket_comments.html" %}
+
+        {% include "tickets/partials/ticket_attachments.html" %}
+
+    </div>
+
+    <!-- Правая колонка -->
+    <div class="col-lg-4">
+
+        <!-- Сроки выполнения -->
+        <div class="card shadow-sm border-0 mb-4">
 
             <div class="card-header bg-white">
                 <h3 class="h6 mb-0">
-                    История изменения сроков
+                    Сроки выполнения
                 </h3>
             </div>
 
             <div class="card-body">
 
-                {% for item in due_date_history %}
-
-                    <div class="border-bottom pb-3 mb-3">
-
-                        <div class="fw-semibold">
-                            {{ item.old_due_date|date:"d.m.Y"|default:"Не указан" }}
-                            →
-                            {{ item.new_due_date|date:"d.m.Y"|default:"Не указан" }}
-                        </div>
-
-                        <div class="small text-muted mt-1">
-                            {{ item.changed_at|date:"d.m.Y H:i" }}
-                            —
-                            {{ item.changed_by.get_full_name|default:item.changed_by.username }}
-                        </div>
-
-                        {% if item.reason %}
-                            <div class="mt-2">
-                                Причина: {{ item.reason }}
-                            </div>
-                        {% endif %}
-
+                <div class="mb-3">
+                    <div class="text-muted small">
+                        Желаемый срок
                     </div>
 
-                {% empty %}
-
-                    <p class="text-muted mb-0">
-                        Срок выполнения пока не изменялся.
-                    </p>
-
-                {% endfor %}
-
-            </div>
-        </div>
-
-        <div class="card shadow-sm border-0 mt-4">
-                <div class="card-header bg-white">
-                    <h3 class="h6 mb-0">История действий</h3>
-                </div>
-
-                <div class="card-body">
-                    {% for item in action_history %}
-                        <div class="border-bottom pb-3 mb-3">
-                            <div class="fw-semibold">
-                                {{ item.get_action_display }}
-                            </div>
-
-                            <div class="small text-muted">
-                                {{ item.created_at|date:"d.m.Y H:i" }}
-                                —
-                                {{ item.actor.get_full_name|default:item.actor.username }}
-                            </div>
-
-                            {% if item.new_assignee %}
-                                <div class="small mt-1">
-                                    Исполнитель:
-                                    {{ item.new_assignee.get_full_name|default:item.new_assignee.username }}
-                                </div>
-                            {% endif %}
-
-                            {% if item.comment %}
-                                <div class="mt-2">
-                                    {{ item.comment|linebreaksbr }}
-                                </div>
-                            {% endif %}
-                        </div>
-                    {% empty %}
-                        <p class="text-muted mb-0">
-                            История действий пока отсутствует.
-                        </p>
-                    {% endfor %}
-                </div>
-            </div>
-
-    </div>
-
-    <div class="col-lg-4">
-
-        <div class="card shadow-sm border-0 mb-4">
-            <div class="card-header bg-white">
-                <h3 class="h6 mb-0">Сроки выполнения</h3>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <div class="text-muted small">Желаемый срок</div>
                     <div class="fw-semibold">
                         {{ ticket.requested_due_date|date:"d.m.Y"|default:"Не указан" }}
                     </div>
                 </div>
+
                 <div class="mb-3">
-                    <div class="text-muted small">Текущий срок</div>
+                    <div class="text-muted small">
+                        Текущий срок
+                    </div>
+
                     <div class="fw-semibold">
                         {{ ticket.due_date|date:"d.m.Y"|default:"Не указан" }}
                     </div>
                 </div>
+
                 <div class="mb-3">
-                    <div class="text-muted small">Назначена</div>
+                    <div class="text-muted small">
+                        Назначена
+                    </div>
+
                     <div>
                         {{ ticket.assigned_at|date:"d.m.Y H:i"|default:"Не назначена" }}
                     </div>
                 </div>
+
                 <div>
-                    <div class="text-muted small">Исполнена</div>
+                    <div class="text-muted small">
+                        Исполнена
+                    </div>
+
                     <div>
                         {{ ticket.completed_at|date:"d.m.Y H:i"|default:"Не исполнена" }}
                     </div>
                 </div>
+
             </div>
         </div>
 
-        {% if can_change_due_date %}
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white">
-                    <h3 class="h6 mb-0">Изменение срока выполнения</h3>
-                </div>
-                <div class="card-body">
-                    <form method="post"
-                          action="{% url 'tickets:change_due_date' ticket.number %}">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="{{ due_date_form.new_due_date.id_for_label }}"
-                                   class="form-label">Новый срок выполнения</label>
-                            {{ due_date_form.new_due_date }}
-                        </div>
-                        <div class="mb-3">
-                            <label for="{{ due_date_form.reason.id_for_label }}"
-                                   class="form-label">
-                                Причина изменения <span class="text-danger">*</span>
-                            </label>
-                            {{ due_date_form.reason }}
-                        </div>
-                        <button type="submit" class="btn btn-outline-success w-100">
-                            Сохранить новый срок
-                        </button>
-                    </form>
-                </div>
-            </div>
-        {% endif %}
-
+        <!-- Управление исполнителем -->
         {% if can_take or can_assign %}
+
             <div class="card shadow-sm border-0 mb-4">
+
                 <div class="card-header bg-white">
-                    <h3 class="h6 mb-0">Управление заявкой</h3>
+                    <h3 class="h6 mb-0">
+                        Управление заявкой
+                    </h3>
                 </div>
+
                 <div class="card-body">
+
                     {% if can_take %}
+
                         <form method="post"
                               action="{% url 'tickets:take' ticket.number %}"
-                              class="mb-3">
+                              class="{% if can_assign %}mb-3{% endif %}">
+
                             {% csrf_token %}
-                            <button type="submit" class="btn btn-success w-100">
+
+                            <button type="submit"
+                                    class="btn btn-success w-100">
                                 Взять в работу
                             </button>
+
                         </form>
+
                     {% endif %}
 
                     {% if can_assign %}
+
                         <form method="post"
                               action="{% url 'tickets:assign' ticket.number %}">
+
                             {% csrf_token %}
+
                             <div class="mb-3">
-                                <label for="{{ assignment_form.assignee.id_for_label }}"
-                                       class="form-label">Назначить исполнителя</label>
+                                <label
+                                    for="{{ assignment_form.assignee.id_for_label }}"
+                                    class="form-label">
+                                    Назначить исполнителя
+                                </label>
+
                                 {{ assignment_form.assignee }}
+
+                                {% for error in assignment_form.assignee.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ error }}
+                                    </div>
+                                {% endfor %}
                             </div>
-                            <button type="submit" class="btn btn-outline-success w-100">
+
+                            <button type="submit"
+                                    class="btn btn-outline-success w-100">
                                 Назначить
                             </button>
+
                         </form>
+
                     {% endif %}
+
                 </div>
             </div>
+
         {% endif %}
 
-        {% if can_complete %}
+        <!-- Изменение срока выполнения -->
+        {% if can_change_due_date %}
+
             <div class="card shadow-sm border-0 mb-4">
+
                 <div class="card-header bg-white">
-                    <h3 class="h6 mb-0">Завершение заявки</h3>
+                    <h3 class="h6 mb-0">
+                        Изменить срок выполнения
+                    </h3>
                 </div>
+
                 <div class="card-body">
+
+                    <form method="post"
+                          action="{% url 'tickets:change_due_date' ticket.number %}">
+
+                        {% csrf_token %}
+
+                        {{ due_date_form.non_field_errors }}
+
+                        <div class="mb-3">
+                            <label
+                                for="{{ due_date_form.new_due_date.id_for_label }}"
+                                class="form-label">
+                                Новый срок выполнения
+                            </label>
+
+                            {{ due_date_form.new_due_date }}
+
+                            {% for error in due_date_form.new_due_date.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ error }}
+                                </div>
+                            {% endfor %}
+
+                            <div class="form-text">
+                                Оставьте поле пустым,
+                                чтобы снять установленный срок.
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label
+                                for="{{ due_date_form.reason.id_for_label }}"
+                                class="form-label">
+                                Причина изменения
+                                <span class="text-danger">*</span>
+                            </label>
+
+                            {{ due_date_form.reason }}
+
+                            {% for error in due_date_form.reason.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ error }}
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <button type="submit"
+                                class="btn btn-outline-primary w-100">
+                            Сохранить новый срок
+                        </button>
+
+                    </form>
+
+                </div>
+            </div>
+
+        {% endif %}
+
+        <!-- Завершение заявки -->
+        {% if can_complete %}
+
+            <div class="card shadow-sm border-0 mb-4">
+
+                <div class="card-header bg-white">
+                    <h3 class="h6 mb-0">
+                        Исполнение заявки
+                    </h3>
+                </div>
+
+                <div class="card-body">
+
                     <form method="post"
                           action="{% url 'tickets:complete' ticket.number %}">
+
                         {% csrf_token %}
-                        {{ complete_form.as_p }}
-                        <button type="submit" class="btn btn-success w-100">
+
+                        {% if complete_form %}
+                            <div class="mb-3">
+                                {{ complete_form.as_p }}
+                            </div>
+                        {% endif %}
+
+                        <button type="submit"
+                                class="btn btn-success w-100">
                             Исполнить заявку
                         </button>
+
                     </form>
+
                 </div>
             </div>
+
         {% endif %}
 
+        <!-- Отклонение заявки -->
         {% if can_reject %}
+
             <div class="card shadow-sm border-0 mb-4">
+
                 <div class="card-header bg-white">
-                    <h3 class="h6 mb-0">Отклонение заявки</h3>
+                    <h3 class="h6 mb-0">
+                        Отклонение заявки
+                    </h3>
                 </div>
+
                 <div class="card-body">
+
                     <form method="post"
                           action="{% url 'tickets:reject' ticket.number %}">
+
                         {% csrf_token %}
-                        {{ reject_form.as_p }}
-                        <button type="submit" class="btn btn-outline-danger w-100">
+
+                        {% if reject_form %}
+                            <div class="mb-3">
+                                {{ reject_form.as_p }}
+                            </div>
+                        {% endif %}
+
+                        <button type="submit"
+                                class="btn btn-outline-danger w-100">
                             Отклонить заявку
                         </button>
+
                     </form>
+
                 </div>
             </div>
+
         {% endif %}
 
     </div>
 
 </div>
+
+<!-- Открытие календаря нажатием на поле даты -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const dateInputs = document.querySelectorAll(
+        'input[type="date"]'
+    );
+
+    dateInputs.forEach(function (dateInput) {
+        dateInput.style.cursor = "pointer";
+
+        dateInput.addEventListener("click", function () {
+            if (typeof dateInput.showPicker === "function") {
+                try {
+                    dateInput.showPicker();
+                } catch (error) {
+                    dateInput.focus();
+                }
+            } else {
+                dateInput.focus();
+            }
+        });
+    });
+});
+</script>
 
 {% endblock %}

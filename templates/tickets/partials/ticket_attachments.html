@@ -1,0 +1,79 @@
+<div class="card shadow-sm border-0 mt-4">
+
+    <div class="card-header bg-white">
+        <h3 class="h6 mb-0">
+            Вложения
+        </h3>
+    </div>
+
+    <div class="card-body">
+
+        {% for attachment in attachments %}
+
+            {% if not attachment.comment_id %}
+
+                <div class="border-bottom pb-3 mb-3">
+
+                    <div class="fw-semibold text-break">
+                        {{ attachment.original_name }}
+                    </div>
+
+                    <div class="text-muted small mb-2">
+                        {{ attachment.size|filesizeformat }}
+                        ·
+                        {{ attachment.uploaded_by.get_full_name|default:attachment.uploaded_by.username }}
+                        ·
+                        {{ attachment.created_at|date:"d.m.Y H:i" }}
+                    </div>
+
+                    <a
+                        href="{% url 'tickets:download_attachment' ticket.number attachment.pk %}"
+                        class="btn btn-sm btn-outline-primary"
+                    >
+                        Скачать
+                    </a>
+
+                </div>
+
+            {% endif %}
+
+        {% empty %}
+
+            <p class="text-muted">
+                Вложений пока нет.
+            </p>
+
+        {% endfor %}
+
+        {% if can_upload_attachment %}
+
+            <form
+                method="post"
+                enctype="multipart/form-data"
+                action="{% url 'tickets:upload_attachment' ticket.number %}"
+            >
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    {{ attachment_form.files.label_tag }}
+                    {{ attachment_form.files }}
+                </div>
+
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                >
+                    Прикрепить файл
+                </button>
+            </form>
+
+            <div class="text-muted small mt-2">
+                Максимальный размер — 10 МБ.
+                Не более 10 файлов на заявку.
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</div>

@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
@@ -6,6 +8,8 @@ from django.utils import timezone
 from apps.organization.models import Department
 
 from django.db import models
+
+from .attachment_storage import private_ticket_storage
 
 
 class TicketAccess(models.Model):
@@ -298,3 +302,103 @@ class TicketActionHistory(models.Model):
     def __str__(self):
         return f"№{self.ticket.number}: {self.get_action_display()}"
 
+
+class TicketComment(models.Model):
+    ticket = models.ForeignKey(
+        Ticket,
+        on_delete=models.CASCADE,
+        related_name="comments",
+        verbose_name="Заявка",
+    )
+
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="ticket_comments",
+        verbose_name="Автор комментария",
+    )
+
+    text = models.TextField(
+        "Текст комментария",
+        max_length=5000,
+    )
+
+    created_at = models.DateTimeField(
+        "Дата создания",
+        default=timezone.now,
+        editable=False,
+    )
+
+    class Meta:
+        verbose_name = "Комментарий заявки"
+        verbose_name_plural = "Комментарии заявок"
+        ordering = ["created_at", "pk"]
+
+    def __str__(self):
+        return (
+            f"Комментарий к заявке №{self.ticket.number} "
+            f"от {self.author}"
+        )
+
+
+def ticket_attachment_path(instance, filename):
+    extension = filename.rsplit(".", 1)[-1].lower()
+    return (
+        f"tickets/{instance.ticket_id}/"
+        f"{uuid.uuid4().hex}.{extension}"
+    )
+
+
+class TicketAttachment(models.Model):
+    ticket = models.ForeignKey(
+        Ticket,
+        on_delete=models.CASCADE,
+        related_name="attachments",
+        verbose_name="Заявка",
+    )
+
+    comment = models.ForeignKey(
+        "TicketComment",
+        on_delete=models.CASCADE,
+        related_name="attachments",
+        null=True,
+        blank=True,
+        verbose_name="Комментарий",
+    )
+
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="ticket_attachments",
+        verbose_name="Загрузил",
+    )
+
+    file = models.FileField(
+        "Файл",
+        upload_to=ticket_attachment_path,
+        storage=private_ticket_storage,
+        max_length=500,
+    )
+
+    original_name = models.CharField(
+        "Исходное имя",
+        max_length=255,
+    )
+
+    size = models.PositiveBigIntegerField(
+        "Размер в байтах",
+    )
+
+    created_at = models.DateTimeField(
+        "Дата загрузки",
+        default=timezone.now,
+        editable=False,
+    )
+
+    class Meta:
+        verbose_name = "Вложение заявки"
+        verbose_name_plural = "Вложения заявок"
+        ordering = ["created_at", "pk"]
+
+    def __str__(self):
+        return self.original_name

@@ -59,6 +59,8 @@ class TicketCreateForm(forms.ModelForm):
             "%Y-%m-%d",
         ]
 
+        self.fields["requested_due_date"].required = True
+
         self.fields["description"].widget.attrs[
             "placeholder"
         ] = "Опишите проблему, необходимые действия и другую информацию"

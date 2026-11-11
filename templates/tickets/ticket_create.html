@@ -17,7 +17,7 @@
         <div class="card shadow-sm border-0">
             <div class="card-body p-4">
 
-                <form method="post">
+                <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
 
                     {% if form.non_field_errors %}
@@ -58,6 +58,29 @@
                         </div>
 
                     {% endfor %}
+
+                    <div class="mb-4">
+                        <label
+                            for="{{ attachment_form.files.id_for_label }}"
+                            class="form-label fw-semibold"
+                        >
+                            Прикрепить файлы
+                        </label>
+
+                        {{ attachment_form.files }}
+
+                        <div class="form-text">
+                            Можно выбрать несколько файлов.
+                            Максимум 10 файлов на заявку,
+                            каждый размером до 10 МБ.
+                        </div>
+
+                        {% for error in attachment_form.files.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ error }}
+                            </div>
+                        {% endfor %}
+                    </div>
 
                     <div class="d-flex gap-2 mt-4">
 

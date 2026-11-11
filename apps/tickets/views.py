@@ -1,17 +1,23 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.shortcuts import render, redirect
-from django.http import QueryDict
-
+from django.shortcuts import render, redirect, get_object_or_404
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.http import HttpResponseNotAllowed
-from django.shortcuts import get_object_or_404
-
+from django.http import (
+    HttpResponseNotAllowed,
+    FileResponse,
+    Http404,
+    QueryDict
+)
+from django.db import transaction
+from .timeline import get_ticket_timeline
 from .assignment_forms import TicketAssignForm
 from .permissions import (
     can_execute_department_tickets,
     can_manage_department_tickets,
+    can_change_ticket_due_date,
+    can_comment_ticket,
+    can_upload_ticket_attachment,
 )
 from .services import (
     take_ticket,
@@ -20,17 +26,25 @@ from .services import (
     reject_ticket,
     change_ticket_due_date
 )
-from .permissions import can_change_ticket_due_date
 from .status_forms import TicketCompleteForm, TicketRejectForm
 from .due_date_forms import TicketDueDateForm
 from .forms import TicketCreateForm
-from .models import Ticket
+from .models import Ticket, TicketAttachment
 from .selectors import (
     get_visible_tickets,
     get_visible_ticket_or_404,
     filter_tickets
 )
 from .filter_forms import TicketFilterForm
+
+from .comment_forms import TicketCommentForm
+from .comment_services import add_ticket_comment
+
+from .attachment_forms import TicketAttachmentForm
+from .attachment_services import (
+    add_ticket_attachment,
+    add_ticket_attachments,
+)
 
 
 @login_required
@@ -81,33 +95,67 @@ def ticket_list(request):
 
 @login_required
 def ticket_create(request):
-
     if request.method == "POST":
         form = TicketCreateForm(request.POST)
 
-        if form.is_valid():
-            ticket = form.save(commit=False)
+        attachment_form = TicketAttachmentForm(
+            request.POST,
+            request.FILES,
+        )
 
-            ticket.author = request.user
-            ticket.status = Ticket.Status.CREATED
-            ticket.assignee = None
+        form_valid = form.is_valid()
+        files_valid = attachment_form.is_valid()
 
-            ticket.save()
-
-            messages.success(
-                request,
-                f"Заявка №{ticket.number} успешно создана."
+        if form_valid and files_valid:
+            uploaded_files = (
+                attachment_form.cleaned_data["all_files"]
             )
 
-            return redirect("tickets:list")
+            created_attachments = []
+
+            try:
+                with transaction.atomic():
+                    ticket = form.save(commit=False)
+                    ticket.author = request.user
+                    ticket.status = Ticket.Status.CREATED
+                    ticket.assignee = None
+                    ticket.save()
+
+                    created_attachments = add_ticket_attachments(
+                        ticket_id=ticket.pk,
+                        actor=request.user,
+                        uploaded_files=uploaded_files,
+                    )
+
+            except ValidationError as exc:
+                messages.error(
+                    request,
+                    "; ".join(exc.messages),
+                )
+
+            except Exception:
+                for attachment in created_attachments:
+                    attachment.file.delete(save=False)
+                raise
+
+            else:
+                messages.success(
+                    request,
+                    f"Заявка №{ticket.number} успешно создана.",
+                )
+                return redirect("tickets:list")
 
     else:
         form = TicketCreateForm()
+        attachment_form = TicketAttachmentForm()
 
     return render(
         request,
         "tickets/ticket_create.html",
-        {"form": form},
+        {
+            "form": form,
+            "attachment_form": attachment_form,
+        },
     )
 
 @login_required
@@ -121,10 +169,18 @@ def ticket_detail(request, number):
         number,
     )
 
-    due_date_history = (
-        ticket.due_date_history
-        .select_related("changed_by")
-        .order_by("-changed_at")
+    timeline = get_ticket_timeline(ticket)
+
+    comments = (
+        ticket.comments
+        .select_related("author")
+        .prefetch_related("attachments")
+        .order_by("created_at", "pk")
+    )
+
+    can_comment = can_comment_ticket(
+        request.user,
+        ticket,
     )
 
     can_take = (
@@ -181,15 +237,6 @@ def ticket_detail(request, number):
         )
     )
 
-    action_history = (
-        ticket.action_history
-        .select_related(
-            "actor",
-            "old_assignee",
-            "new_assignee",
-        )
-    )
-
     can_change_due_date = can_change_ticket_due_date(
         request.user,
         ticket,
@@ -205,12 +252,22 @@ def ticket_detail(request, number):
         else None
     )
 
+    attachments = (
+        ticket.attachments
+        .select_related("uploaded_by")
+        .order_by("created_at", "pk")
+    )
+
+    can_upload_attachment = can_upload_ticket_attachment(
+        request.user,
+        ticket,
+    )
+
     return render(
         request,
         "tickets/ticket_detail.html",
         {
             "ticket": ticket,
-            "due_date_history": due_date_history,
             "can_take": can_take,
             "can_assign": can_assign,
             "assignment_form": assignment_form,
@@ -218,9 +275,15 @@ def ticket_detail(request, number):
             "can_reject": can_reject,
             "complete_form": TicketCompleteForm(),
             "reject_form": TicketRejectForm(),
-            "action_history": action_history,
             "can_change_due_date": can_change_due_date,
             "due_date_form": due_date_form,
+            "timeline": timeline,
+            "comments": comments,
+            "can_comment": can_comment,
+            "comment_form": TicketCommentForm(),
+            "attachments": attachments,
+            "can_upload_attachment": can_upload_attachment,
+            "attachment_form": TicketAttachmentForm(),
         },
     )
 
@@ -436,3 +499,180 @@ def ticket_change_due_date(request, number):
         "tickets:detail",
         number=number,
     )
+
+
+
+@login_required
+def ticket_add_comment(request, number):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    ticket = get_visible_ticket_or_404(
+        request.user,
+        number,
+    )
+
+    if not can_comment_ticket(request.user, ticket):
+        raise PermissionDenied(
+            "Нет прав на комментирование заявки."
+        )
+
+    form = TicketCommentForm(
+        request.POST,
+        request.FILES,
+    )
+
+    if not form.is_valid():
+        for errors in form.errors.values():
+            for error in errors:
+                messages.error(request, error)
+
+        return redirect(
+            "tickets:detail",
+            number=number,
+        )
+
+    created_attachments = []
+
+    try:
+        with transaction.atomic():
+            comment = add_ticket_comment(
+                ticket_id=ticket.pk,
+                actor=request.user,
+                text=form.cleaned_data["text"],
+            )
+
+            created_attachments = add_ticket_attachments(
+                ticket_id=ticket.pk,
+                actor=request.user,
+                uploaded_files=form.cleaned_data["files"],
+                comment=comment,
+            )
+
+    except ValidationError as exc:
+        messages.error(
+            request,
+            "; ".join(exc.messages),
+        )
+
+    except Exception:
+        for attachment in created_attachments:
+            attachment.file.delete(save=False)
+        raise
+
+    else:
+        messages.success(
+            request,
+            "Комментарий добавлен.",
+        )
+
+    return redirect(
+        "tickets:detail",
+        number=number,
+    )
+
+
+@login_required
+def ticket_upload_attachment(request, number):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    ticket = get_visible_ticket_or_404(
+        request.user,
+        number,
+    )
+
+    if not can_upload_ticket_attachment(
+        request.user,
+        ticket,
+    ):
+        raise PermissionDenied(
+            "Нет прав на загрузку вложений."
+        )
+
+    form = TicketAttachmentForm(
+        request.POST,
+        request.FILES,
+    )
+
+    # Сначала проверяем форму.
+    if not form.is_valid():
+        for errors in form.errors.values():
+            for error in errors:
+                messages.error(request, error)
+
+        return redirect(
+            "tickets:detail",
+            number=number,
+        )
+
+    uploaded_files = form.cleaned_data["all_files"]
+
+    if not uploaded_files:
+        messages.error(
+            request,
+            "Выберите хотя бы один файл.",
+        )
+        return redirect(
+            "tickets:detail",
+            number=number,
+        )
+
+    try:
+        attachments = add_ticket_attachments(
+            ticket_id=ticket.pk,
+            actor=request.user,
+            uploaded_files=uploaded_files,
+        )
+
+    except ValidationError as exc:
+        messages.error(
+            request,
+            "; ".join(exc.messages),
+        )
+
+    else:
+        messages.success(
+            request,
+            f"Прикреплено файлов: {len(attachments)}.",
+        )
+
+    return redirect(
+        "tickets:detail",
+        number=number,
+    )
+
+
+@login_required
+def ticket_download_attachment(
+    request,
+    number,
+    attachment_id,
+):
+    ticket = get_visible_ticket_or_404(
+        request.user,
+        number,
+    )
+
+    attachment = get_object_or_404(
+        TicketAttachment,
+        pk=attachment_id,
+        ticket=ticket,
+    )
+
+    try:
+        file_handle = attachment.file.open("rb")
+    except FileNotFoundError:
+        raise Http404("Файл не найден.")
+
+    response = FileResponse(
+        file_handle,
+        as_attachment=True,
+        filename=attachment.original_name,
+        content_type="application/octet-stream",
+    )
+
+    response["X-Content-Type-Options"] = "nosniff"
+    response["Cache-Control"] = "private, no-store"
+
+    return response

@@ -1,0 +1,103 @@
+<div class="card shadow-sm border-0 mt-4" id="ticket-comments">
+
+    <div class="card-header bg-white">
+        <h3 class="h6 mb-0">
+            Обсуждение заявки
+            <span class="badge bg-secondary ms-2">
+                {{ comments.count }}
+            </span>
+        </h3>
+    </div>
+
+    <div class="card-body">
+
+        {% for comment in comments %}
+
+            <div class="mb-3 pb-3 border-bottom">
+
+                <div class="d-flex justify-content-between
+                            align-items-start gap-2 mb-2">
+
+                    <strong>
+                        {{ comment.author.get_full_name|default:comment.author.username }}
+                    </strong>
+
+                    <span class="text-muted small">
+                        {{ comment.created_at|date:"d.m.Y H:i" }}
+                    </span>
+
+                </div>
+
+                <div class="text-break">
+                    {{ comment.text|linebreaksbr }}
+                </div>
+
+                {% for attachment in comment.attachments.all %}
+
+                    <div class="mt-2">
+                        <a
+                            href="{% url 'tickets:download_attachment' ticket.number attachment.pk %}"
+                            class="text-decoration-none"
+                        >
+                            📎 {{ attachment.original_name }}
+                        </a>
+                
+                        <span class="text-muted small">
+                            ({{ attachment.size|filesizeformat }})
+                        </span>
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% empty %}
+
+            <p class="text-muted mb-3">
+                Комментариев пока нет.
+            </p>
+
+        {% endfor %}
+
+        {% if can_comment %}
+
+            <form
+                method="post"
+                enctype="multipart/form-data"
+                action="{% url 'tickets:add_comment' ticket.number %}"
+            >
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label
+                        for="{{ comment_form.text.id_for_label }}"
+                        class="form-label fw-semibold"
+                    >
+                        Новый комментарий
+                    </label>
+
+                    {{ comment_form.text }}
+                </div>
+
+                <div class="mb-3">
+                    {{ comment_form.files.label_tag }}
+                    {{ comment_form.files }}
+
+                    <div class="form-text">
+                        Необязательно. Можно прикрепить несколько файлов.
+                    </div>
+                </div>
+
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                >
+                    Отправить комментарий
+                </button>
+
+            </form>
+
+        {% endif %}
+
+    </div>
+</div>

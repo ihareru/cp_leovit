@@ -4,6 +4,7 @@ from .models import (
     Ticket,
     TicketCounter,
     TicketDueDateHistory,
+    TicketComment,
 )
 
 
@@ -115,6 +116,41 @@ class TicketDueDateHistoryAdmin(admin.ModelAdmin):
     ]
 
     def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(TicketComment)
+class TicketCommentAdmin(admin.ModelAdmin):
+    list_display = [
+        "ticket",
+        "author",
+        "created_at",
+    ]
+
+    search_fields = [
+        "ticket__number",
+        "author__username",
+        "text",
+    ]
+
+    list_filter = [
+        "created_at",
+    ]
+
+    readonly_fields = [
+        "ticket",
+        "author",
+        "text",
+        "created_at",
+    ]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
         return False
 
     def has_delete_permission(self, request, obj=None):

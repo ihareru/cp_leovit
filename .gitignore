@@ -26,6 +26,9 @@ media/*
 # Static build
 staticfiles/
 
+# private_uploads
+/private_uploads/
+
 # Logs
 *.log
 logs/

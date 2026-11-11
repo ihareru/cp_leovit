@@ -138,3 +138,38 @@ def can_change_ticket_due_date(user, ticket):
             ticket.department,
         )
     )
+
+
+def can_comment_ticket(user, ticket):
+    """
+    Право добавления комментария.
+
+    Разрешено:
+    - автору заявки;
+    - действующему исполнителю/руководителю отдела;
+    - администратору портала.
+
+    Глобальное право просмотра само по себе
+    не даёт права комментирования.
+    """
+
+    if not is_active_user(user):
+        return False
+
+    if is_portal_admin(user):
+        return True
+
+    if ticket.author_id == user.pk:
+        return True
+
+    return can_execute_department_tickets(
+        user,
+        ticket.department,
+    )
+
+def can_upload_ticket_attachment(user, ticket):
+    """
+    Загрузка вложений разрешена тем же пользователям,
+    которым разрешено комментировать заявку.
+    """
+    return can_comment_ticket(user, ticket)

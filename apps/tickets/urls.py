@@ -45,4 +45,19 @@ urlpatterns = [
         views.ticket_change_due_date,
         name="change_due_date",
     ),
+    path(
+        "<int:number>/comments/add/",
+        views.ticket_add_comment,
+        name="add_comment",
+    ),
+    path(
+        "<int:number>/attachments/upload/",
+        views.ticket_upload_attachment,
+        name="upload_attachment",
+    ),
+    path(
+        "<int:number>/attachments/<int:attachment_id>/download/",
+        views.ticket_download_attachment,
+        name="download_attachment",
+    ),
 ]

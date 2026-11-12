@@ -4,6 +4,7 @@ from datetime import datetime
 from .models import (
     TicketActionHistory,
     TicketDueDateHistory,
+    TicketAttachment,
 )
 
 
@@ -91,7 +92,28 @@ def get_ticket_timeline(ticket):
             )
         )
 
-    # 4. Общая сортировка
+    # 4. История удаления вложений
+    deleted_attachments = (
+        TicketAttachment.objects
+        .filter(
+            ticket=ticket,
+            deleted_at__isnull=False,
+        )
+        .select_related("deleted_by")
+    )
+
+    for attachment in deleted_attachments:
+        events.append(
+            TicketTimelineEvent(
+                kind="attachment_deleted",
+                title="Удалено вложение",
+                occurred_at=attachment.deleted_at,
+                actor=attachment.deleted_by,
+                comment=attachment.original_name,
+            )
+        )
+
+    # 5. Общая сортировка
     events.sort(
         key=lambda event: event.occurred_at,
         reverse=True,

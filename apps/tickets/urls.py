@@ -60,4 +60,9 @@ urlpatterns = [
         views.ticket_download_attachment,
         name="download_attachment",
     ),
+    path(
+            "<int:number>/attachments/<int:attachment_id>/delete/",
+            views.ticket_delete_attachment,
+            name="delete_attachment",
+        ),
 ]

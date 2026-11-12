@@ -395,6 +395,26 @@ class TicketAttachment(models.Model):
         editable=False,
     )
 
+    deleted_at = models.DateTimeField(
+        "Дата удаления",
+        null=True,
+        blank=True,
+        editable=False,
+    )
+
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="deleted_ticket_attachments",
+        verbose_name="Удалил",
+    )
+
+    @property
+    def is_deleted(self):
+        return self.deleted_at is not None
+
     class Meta:
         verbose_name = "Вложение заявки"
         verbose_name_plural = "Вложения заявок"

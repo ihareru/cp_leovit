@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from django.utils import timezone
 from django.conf import settings
 from django.core.exceptions import (
     PermissionDenied,
@@ -11,7 +12,7 @@ from .attachment_validation import (
     validate_ticket_attachment,
 )
 from .models import Ticket, TicketAttachment
-from .permissions import can_upload_ticket_attachment
+from .permissions import can_upload_ticket_attachment, can_delete_ticket_attachment
 from .selectors import get_visible_tickets
 
 
@@ -41,7 +42,8 @@ def add_ticket_attachment(*, ticket_id, actor, uploaded_file):
         )
 
     count = TicketAttachment.objects.filter(
-        ticket=ticket
+        ticket=ticket,
+        deleted_at__isnull=True,
     ).count()
 
     if count >= settings.TICKET_ATTACHMENT_MAX_COUNT:
@@ -114,7 +116,8 @@ def add_ticket_attachments(
             )
 
     current_count = TicketAttachment.objects.filter(
-        ticket=ticket
+        ticket=ticket,
+        deleted_at__isnull=True,
     ).count()
 
     max_count = settings.TICKET_ATTACHMENT_MAX_COUNT
@@ -152,3 +155,64 @@ def add_ticket_attachments(
         raise
 
     return created
+
+
+@transaction.atomic
+def delete_ticket_attachment(
+    *,
+    ticket_id,
+    attachment_id,
+    actor,
+):
+    """
+    Мягкое удаление вложения.
+
+    Физический файл сохраняется.
+    """
+
+    if not get_visible_tickets(actor).filter(
+        pk=ticket_id
+    ).exists():
+        raise Ticket.DoesNotExist(
+            "Заявка недоступна."
+        )
+
+    ticket = (
+        Ticket.objects
+        .select_for_update()
+        .get(pk=ticket_id)
+    )
+
+    try:
+        attachment = (
+            TicketAttachment.objects
+            .select_related("uploaded_by")
+            .get(
+                pk=attachment_id,
+                ticket=ticket,
+            )
+        )
+    except TicketAttachment.DoesNotExist:
+        raise ValidationError(
+            "Вложение не найдено."
+        )
+
+    if not can_delete_ticket_attachment(
+        actor,
+        attachment,
+    ):
+        raise PermissionDenied(
+            "Нет прав на удаление вложения."
+        )
+
+    attachment.deleted_at = timezone.now()
+    attachment.deleted_by = actor
+
+    attachment.save(
+        update_fields=[
+            "deleted_at",
+            "deleted_by",
+        ]
+    )
+
+    return attachment

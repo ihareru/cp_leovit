@@ -173,3 +173,31 @@ def can_upload_ticket_attachment(user, ticket):
     которым разрешено комментировать заявку.
     """
     return can_comment_ticket(user, ticket)
+
+
+def can_delete_ticket_attachment(user, attachment):
+    """
+    Удалять вложения могут:
+    - пользователь, загрузивший файл;
+    - руководитель соответствующего отдела;
+    - администратор портала.
+
+    Одного права просмотра недостаточно.
+    """
+
+    if not is_active_user(user):
+        return False
+
+    if attachment.deleted_at is not None:
+        return False
+
+    if is_portal_admin(user):
+        return True
+
+    if attachment.uploaded_by_id == user.pk:
+        return True
+
+    return can_manage_department_tickets(
+        user,
+        attachment.ticket.department,
+    )

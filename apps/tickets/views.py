@@ -10,6 +10,7 @@ from django.http import (
     QueryDict
 )
 from django.db import transaction
+from django.db.models import Prefetch
 from .timeline import get_ticket_timeline
 from .assignment_forms import TicketAssignForm
 from .permissions import (
@@ -18,6 +19,7 @@ from .permissions import (
     can_change_ticket_due_date,
     can_comment_ticket,
     can_upload_ticket_attachment,
+    can_delete_ticket_attachment,
 )
 from .services import (
     take_ticket,
@@ -44,6 +46,7 @@ from .attachment_forms import TicketAttachmentForm
 from .attachment_services import (
     add_ticket_attachment,
     add_ticket_attachments,
+    delete_ticket_attachment,
 )
 
 
@@ -174,7 +177,14 @@ def ticket_detail(request, number):
     comments = (
         ticket.comments
         .select_related("author")
-        .prefetch_related("attachments")
+        .prefetch_related(
+            Prefetch(
+                "attachments",
+                queryset=TicketAttachment.objects.filter(
+                    deleted_at__isnull=True,
+                ).select_related("uploaded_by"),
+            )
+        )
         .order_by("created_at", "pk")
     )
 
@@ -254,9 +264,31 @@ def ticket_detail(request, number):
 
     attachments = (
         ticket.attachments
+        .filter(
+            deleted_at__isnull=True,
+            comment__isnull=True,
+        )
         .select_related("uploaded_by")
         .order_by("created_at", "pk")
     )
+
+    active_attachments = (
+        TicketAttachment.objects
+        .filter(
+            ticket=ticket,
+            deleted_at__isnull=True,
+        )
+        .select_related("uploaded_by")
+    )
+
+    deletable_attachment_ids = {
+        attachment.pk
+        for attachment in active_attachments
+        if can_delete_ticket_attachment(
+            request.user,
+            attachment,
+        )
+    }
 
     can_upload_attachment = can_upload_ticket_attachment(
         request.user,
@@ -284,6 +316,7 @@ def ticket_detail(request, number):
             "attachments": attachments,
             "can_upload_attachment": can_upload_attachment,
             "attachment_form": TicketAttachmentForm(),
+            "deletable_attachment_ids": deletable_attachment_ids,
         },
     )
 
@@ -658,6 +691,7 @@ def ticket_download_attachment(
         TicketAttachment,
         pk=attachment_id,
         ticket=ticket,
+        deleted_at__isnull=True,
     )
 
     try:
@@ -676,3 +710,42 @@ def ticket_download_attachment(
     response["Cache-Control"] = "private, no-store"
 
     return response
+
+
+@login_required
+def ticket_delete_attachment(
+    request,
+    number,
+    attachment_id,
+):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    ticket = get_visible_ticket_or_404(
+        request.user,
+        number,
+    )
+
+    try:
+        delete_ticket_attachment(
+            ticket_id=ticket.pk,
+            attachment_id=attachment_id,
+            actor=request.user,
+        )
+
+    except ValidationError as exc:
+        messages.error(
+            request,
+            "; ".join(exc.messages),
+        )
+
+    else:
+        messages.success(
+            request,
+            "Вложение удалено.",
+        )
+
+    return redirect(
+        "tickets:detail",
+        number=ticket.number,
+    )

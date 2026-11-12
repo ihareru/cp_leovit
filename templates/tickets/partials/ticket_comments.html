@@ -41,10 +41,31 @@
                         >
                             📎 {{ attachment.original_name }}
                         </a>
-                
+
                         <span class="text-muted small">
                             ({{ attachment.size|filesizeformat }})
                         </span>
+
+                        {% if attachment.pk in deletable_attachment_ids %}
+
+                            <form
+                                method="post"
+                                action="{% url 'tickets:delete_attachment' ticket.number attachment.pk %}"
+                                class="d-inline ms-2"
+                                onsubmit="return confirm('Удалить вложение «{{ attachment.original_name|escapejs }}»?');"
+                            >
+                                {% csrf_token %}
+
+                                <button
+                                    type="submit"
+                                    class="btn btn-sm btn-outline-danger"
+                                >
+                                    Удалить
+                                </button>
+                            </form>
+
+                        {% endif %}
+
                     </div>
 
                 {% endfor %}

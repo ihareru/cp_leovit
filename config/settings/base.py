@@ -75,6 +75,10 @@ ASGI_APPLICATION = "config.asgi.application"
 
 AUTH_USER_MODEL = "accounts.User"
 
+AUTHENTICATION_BACKENDS = [
+    "apps.accounts.backends.EmailBackend",
+]
+
 DATABASES = {
     "default": env.db("DATABASE_URL"),
 }

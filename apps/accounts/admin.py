@@ -1,11 +1,19 @@
+
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
+from .admin_forms import (
+    PortalUserChangeForm,
+    PortalUserCreationForm,
+)
 from .models import User
 
 
 @admin.register(User)
 class PortalUserAdmin(UserAdmin):
+    form = PortalUserChangeForm
+    add_form = PortalUserCreationForm
+
     fieldsets = UserAdmin.fieldsets + (
         (
             "Корпоративная информация",
@@ -19,7 +27,14 @@ class PortalUserAdmin(UserAdmin):
         ),
     )
 
-    add_fieldsets = UserAdmin.add_fieldsets
+    add_fieldsets = UserAdmin.add_fieldsets + (
+        (
+            "Электронная почта",
+            {
+                "fields": ("email",),
+            },
+        ),
+    )
 
     list_display = (
         "username",

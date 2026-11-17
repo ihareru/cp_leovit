@@ -7,16 +7,18 @@ class PortalAuthenticationForm(AuthenticationForm):
         label="Запомнить меня",
         required=False,
         widget=forms.CheckboxInput(
-            attrs={"class": "form-check-input"}
+            attrs={
+                "class": "form-check-input",
+            }
         ),
     )
 
-    username = forms.CharField(
-        label="Логин",
-        widget=forms.TextInput(
+    username = forms.EmailField(
+        label="Электронная почта",
+        widget=forms.EmailInput(
             attrs={
                 "class": "form-control",
-                "placeholder": "Введите логин",
+                "placeholder": "Введите email",
                 "autocomplete": "username",
                 "autofocus": True,
             }

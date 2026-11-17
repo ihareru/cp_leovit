@@ -10,7 +10,7 @@
         <h1 class="mb-2">Вход в портал</h1>
 
         <p class="text-muted mb-4">
-            Введите корпоративный логин и пароль.
+            Введите электронную почту и пароль.
         </p>
 
         {% if form.errors %}
@@ -31,7 +31,7 @@
             <div class="mb-3">
                 <label for="{{ form.username.id_for_label }}"
                        class="form-label">
-                    Логин
+                    Электронная почта
                 </label>
 
                 {{ form.username }}

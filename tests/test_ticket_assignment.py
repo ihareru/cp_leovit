@@ -22,11 +22,13 @@ def setup_data(db, django_user_model):
 
     author = django_user_model.objects.create_user(
         username="assign_author",
+        email="assign_author@example.com",
         password="TestPassword123!",
     )
 
     executor = django_user_model.objects.create_user(
         username="assign_executor",
+        email="assign_executor@example.com",
         password="TestPassword123!",
     )
 

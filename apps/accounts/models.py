@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.db.models.functions import Lower
 
 
 class User(AbstractUser):
@@ -12,7 +13,6 @@ class User(AbstractUser):
 
     email = models.EmailField(
         "Электронная почта",
-        blank=True,
     )
 
     middle_name = models.CharField(
@@ -33,10 +33,23 @@ class User(AbstractUser):
         blank=True,
     )
 
+    def clean(self):
+        super().clean()
+
+        if self.email:
+            self.email = self.email.strip().lower()
+
     class Meta:
         verbose_name = "Пользователь"
         verbose_name_plural = "Пользователи"
         ordering = ["last_name", "first_name", "username"]
+
+        constraints = [
+            models.UniqueConstraint(
+                Lower("email"),
+                name="accounts_user_email_ci_unique",
+            ),
+        ]
 
     def __str__(self):
         full_name = " ".join(

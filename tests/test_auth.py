@@ -6,6 +6,7 @@ from django.urls import reverse
 def portal_user(django_user_model):
     return django_user_model.objects.create_user(
         username="testemployee",
+        email="testemployee@example.com",
         password="TestPassword123!",
         first_name="Иван",
         last_name="Иванов",
@@ -23,7 +24,7 @@ def test_successful_login(client, portal_user):
     response = client.post(
         reverse("login"),
         {
-            "username": "testemployee",
+            "username": "testemployee@example.com",
             "password": "TestPassword123!",
         },
     )
@@ -37,7 +38,7 @@ def test_invalid_login(client, portal_user):
     response = client.post(
         reverse("login"),
         {
-            "username": "testemployee",
+            "username": "testemployee@example.com",
             "password": "WrongPassword!",
         },
     )
@@ -69,7 +70,7 @@ def test_remember_me(client, portal_user):
     response = client.post(
         reverse("login"),
         {
-            "username": "testemployee",
+            "username": "testemployee@example.com",
             "password": "TestPassword123!",
             "remember_me": "on",
         },
@@ -87,7 +88,7 @@ def test_without_remember_me(client, portal_user):
     response = client.post(
         reverse("login"),
         {
-            "username": "testemployee",
+            "username": "testemployee@example.com",
             "password": "TestPassword123!",
         },
     )
@@ -136,7 +137,7 @@ def test_login_returns_to_requested_page(client, portal_user):
     response = client.post(
         reverse("login") + "?next=/contacts/",
         {
-            "username": "testemployee",
+            "username": "testemployee@example.com",
             "password": "TestPassword123!",
             "next": "/contacts/",
         },

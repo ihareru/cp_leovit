@@ -29,6 +29,14 @@ class LoginRequiredMiddleware:
         if path == login_path:
             return self.get_response(request)
 
+        public_paths = {
+            reverse("password_reset_request"),
+            reverse("password_reset_confirm"),
+        }
+
+        if path in public_paths:
+            return self.get_response(request)
+
         if path.startswith(admin_path):
             return self.get_response(request)
 

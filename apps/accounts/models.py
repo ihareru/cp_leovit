@@ -63,3 +63,6 @@ class User(AbstractUser):
         )
 
         return full_name or self.username
+
+from .password_reset_models import PasswordResetCode  # noqa: E402,F401
+from .password_reset_rate_models import PasswordResetRateLimit  # noqa: E402,F401

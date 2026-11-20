@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily Leovit Portal Password Reset Cleanup
+
+[Timer]
+OnCalendar=*-*-* 03:00:00 Europe/Moscow
+Persistent=true
+AccuracySec=1min
+Unit=leovit-portal-cleanup.service
+
+[Install]
+WantedBy=timers.target
